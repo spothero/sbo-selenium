@@ -10,9 +10,14 @@ class LazySettings(object):
                        'localhost:9001')
 
     @property
+    def SELENIUM_DEFAULT_BROWSER(self):
+        """Default browser to use when running tests"""
+        return getattr(django_settings, 'SELENIUM_DEFAULT_BROWSER', ['chrome'])
+
+    @property
     def SELENIUM_DEFAULT_TESTS(self):
         """Default Selenium test package to run"""
-        return getattr(django_settings, 'SELENIUM_DEFAULT_TESTS', '')
+        return getattr(django_settings, 'SELENIUM_DEFAULT_TESTS', [])
 
     @property
     def SELENIUM_LOG_FILE(self):

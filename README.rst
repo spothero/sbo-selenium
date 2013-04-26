@@ -14,10 +14,9 @@ rerun setup.py::
 
     python setup.py develop --always-unzip
 
-Firefox can be driven by Selenium with nothing else installed, but we typically
-default to Chrome because as a WebKit-derived browser it tends to match the
-behavior of mobile devices a little better.  To drive Chrome via Selenium,
-you'll need to install both Chrome itself and then chromedriver:
+To run tests using a particular browser, it needs to already be installed.  To
+drive Chrome via Selenium, you'll need to install both Chrome itself and then
+chromedriver:
  
 1. Download the correct ChromeDriver from http://code.google.com/p/chromedriver/downloads/list
 2. Put the binary, chromedriver, somewhere on your path 
@@ -26,9 +25,15 @@ you'll need to install both Chrome itself and then chromedriver:
 On Mac OS X, if you have Homebrew installed you can instead run
 ``brew install chromedriver``.
 
-Selenium can also be used to run tests in Android and iOS simulators.
-Documentation on this to be written later (we've done iOS Selenium testing
-before, but there are apparently better ways to do it now).
+To test Mobile Safari in the iPhone simulator, you'll first need to do the
+following:
+
+* Install Xcode
+* From the Downloads tab of the Xcode Preferences dialog, install "Command Line Tools" and one of the iOS Simulator components (probably the latest one)
+* Download and run `Appium <http://appium.io/>`_
+* Check the "Use Mobile Safari" checkbox
+* If you want to test in the iPad form factor, check the "Force Device" checkbox and make sure "iPad" is selected next to it
+* Click the "Launch" button
 
 Settings
 --------
@@ -39,10 +44,13 @@ runs:
 * ``DJANGO_LIVE_TEST_SERVER_ADDRESS`` - The address at which to run the test
   server (this will be used as the environment variable of the same name
   described in the Django testing documentation).  Default value is
-  ``'localhost:9001'``.
+  ``'localhost:9090'``.
+* ``SELENIUM_DEFAULT_BROWSER`` - The web browser to use for tests when none is
+  specified.  Default value is ``chrome``.
 * ``SELENIUM_DEFAULT_TESTS`` - The Selenium test(s) to be run by default when
   none are specified.  Should be an array of nose-compatible test
-  specifications (see `Running Tests`_ below for examples).
+  specifications (see `Running Tests`_ below for examples).  Default value is
+  an empty list.
 * ``SELENIUM_LOG_FILE`` - Absolute path of the file to log debug and error
   messages to.  If not set, these messages will not appear anywhere (adding
   them to stderr or stdout would clutter the test results to the point of
@@ -110,11 +118,15 @@ All the usual methods that nose uses to identify tests should work::
 (Note that a specifying a package, like myapp.tests.selenium when the actual
 tests are defined in modules within that package, does NOT work.)
 
-By default, tests are run in Chrome.  You can use the -b or --browser
-parameter to change this::
+By default, tests are run in the browser specified by SELENIUM_DEFAULT_BROWSER.
+You can use the -b or --browser parameter to change this::
 
     ./manage.py selenium -b firefox
-    ./manage.py selenium --browser=chrome
+    ./manage.py selenium --browser=safari
+
+Valid browser names are "chrome", "firefox", "htmlunit", "ios", "opera",
+"phantomjs", and "safari" ("ipad", "iphone", and "ipod" are treated as
+synonyms for "ios", the form factor is chosen in Appium).
 
 You can also specify the number of times to run the tests (for example, if you
 have a test that is failing intermittently for some reason and want to run it
@@ -129,6 +141,4 @@ Some things we did before via manual configuration and a fragile shell script
 which still need to be added to this testing framework:
 
 * Android simulator testing
-* iOS simulator testing
 * Sauce Labs support
-* Manage standalone Selenium server for Safari and htmlunit support

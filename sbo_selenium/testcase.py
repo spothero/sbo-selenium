@@ -15,9 +15,7 @@ from django.test.testcases import QuietWSGIRequestHandler, StoppableWSGIServer
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, \
     StaleElementReferenceException, TimeoutException
-from selenium.webdriver import DesiredCapabilities
-from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
-from selenium.webdriver.firefox.webdriver import WebDriver as FirefoxWebDriver
+from selenium.webdriver import Chrome, DesiredCapabilities, Firefox, PhantomJS
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.support.color import Color
 from selenium.webdriver.support.ui import Select
@@ -191,10 +189,10 @@ class SeleniumTestCase(LiveServerTestCase):
     """
 
     @classmethod
-    def ios_command_executor(cls):
+    def appium_command_executor(cls):
         """ Get the command executor URL for iOS simulator testing """
-        if hasattr(cls, '_ios_executor'):
-            return cls._ios_executor
+        if hasattr(cls, '_appium_executor'):
+            return cls._appium_executor
         # Get the address iWebDriver will connect to
         address = None
         try:
@@ -205,10 +203,10 @@ class SeleniumTestCase(LiveServerTestCase):
         # If we don't have an address we should use localhost
         if not address:
             address = '127.0.0.1'
-        port = 3001
-        cls._ios_executor = "".join(["http://", address, ":", str(port),
+        port = 4723
+        cls._appium_executor = "".join(["http://", address, ":", str(port),
                                      '/wd/hub'])
-        return cls._ios_executor
+        return cls._appium_executor
 
     @classmethod
     def setUpClass(cls):
@@ -229,23 +227,32 @@ class SeleniumTestCase(LiveServerTestCase):
     def setUp(self):
         """ Start a new browser instance for each test """
         self._screenshot_number = 1
-        self.browser = os.getenv('SELENIUM_BROWSER', 'chrome')
+        self.browser = os.getenv('SELENIUM_BROWSER',
+                                 settings.SELENIUM_DEFAULT_BROWSER())
         if os.getenv('SELENIUM_HOST'):
             self.sel = self.sauce_labs_driver()
         elif self.browser == 'firefox':
-            self.sel = FirefoxWebDriver()
+            self.sel = Firefox()
         elif self.browser == 'htmlunit':
             self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
-        elif self.browser == 'iphone':
-            self.sel = RemoteWebDriver(command_executor=self.ios_command_executor(),
-                desired_capabilities=DesiredCapabilities.IPHONE)
+        elif self.browser in ['ios', 'ipad', 'ipod', 'iphone']:
+            capabilities = {
+                'app': 'safari',
+                'browserName': '',
+                'device': 'iPhone Simulator',
+                'os': 'iOS 6.1'
+            }
+            self.sel = RemoteWebDriver(command_executor=self.appium_command_executor(),
+                                       desired_capabilities=capabilities)
+        elif self.browser == 'opera':
+            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
+        elif self.browser == 'phantomjs':
+            self.sel = PhantomJS()
         elif self.browser == 'safari':
             # requires a Safari extension to be built from source and installed
-            self.sel = RemoteWebDriver(desired_capabilities={
-                "browserName": "safari", "version": "", "platform": "MAC",
-                "javascriptEnabled": True})
+            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
         else:
-            self.sel = ChromeWebDriver()
+            self.sel = Chrome()
         # Give the browser a little time; Firefox throws random errors if you
         # hit it too soon
         time.sleep(1)
@@ -334,6 +341,9 @@ class SeleniumTestCase(LiveServerTestCase):
     def screenshot(self):
         if hasattr(self, 'sauce_user_name'):
             # Sauce Labs is taking screenshots for us
+            return
+        if self.browser == 'htmlunit':
+            # Doesn't support screenshots
             return
         screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
         if not screenshot_dir:
