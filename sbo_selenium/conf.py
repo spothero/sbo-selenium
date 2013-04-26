@@ -30,6 +30,11 @@ class LazySettings(object):
         return getattr(django_settings, 'SELENIUM_POLL_FREQUENCY', 0.5)
 
     @property
+    def SELENIUM_JAR_PATH(self):
+        """Absolute path to the Selenium server jar file"""
+        return getattr(django_settings, 'SELENIUM_JAR_PATH', '')
+
+    @property
     def SELENIUM_SCREENSHOT_DIR(self):
         """Directory in which to store screenshots"""
         return getattr(django_settings, 'SELENIUM_SCREENSHOT_DIR', '')

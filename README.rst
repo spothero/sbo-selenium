@@ -35,6 +35,11 @@ following:
 * If you want to test in the iPad form factor, check the "Force Device" checkbox and make sure "iPad" is selected next to it
 * Click the "Launch" button
 
+To test Opera or Safari, you'll need to download the Selenium standalone server
+`jar file <http://selenium.googlecode.com/files/selenium-server-standalone-2.32.0.jar>`_
+and configure the path to it in the SELENIUM_JAR_PATH setting
+described below.
+
 Settings
 --------
 
@@ -51,6 +56,8 @@ runs:
   none are specified.  Should be an array of nose-compatible test
   specifications (see `Running Tests`_ below for examples).  Default value is
   an empty list.
+* ``SELENIUM_JAR_PATH`` - Absolute path of the Selenium standalone server jar
+  file.
 * ``SELENIUM_LOG_FILE`` - Absolute path of the file to log debug and error
   messages to.  If not set, these messages will not appear anywhere (adding
   them to stderr or stdout would clutter the test results to the point of

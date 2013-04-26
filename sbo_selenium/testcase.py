@@ -228,7 +228,7 @@ class SeleniumTestCase(LiveServerTestCase):
         """ Start a new browser instance for each test """
         self._screenshot_number = 1
         self.browser = os.getenv('SELENIUM_BROWSER',
-                                 settings.SELENIUM_DEFAULT_BROWSER())
+                                 settings.SELENIUM_DEFAULT_BROWSER)
         if os.getenv('SELENIUM_HOST'):
             self.sel = self.sauce_labs_driver()
         elif self.browser == 'firefox':

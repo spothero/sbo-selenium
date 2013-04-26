@@ -9,11 +9,6 @@ from django.core.management.base import BaseCommand
 from sbo_selenium.conf import settings
 from sbo_selenium.utils import OutputMonitor
 
-RESOURCES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                       '..', '..', 'resources'))
-SELENIUM_JAR = os.path.join(RESOURCES_DIR,
-                            'selenium-server-standalone-2.32.0.jar')
-
 
 class Command(BaseCommand):
     """
@@ -66,7 +61,11 @@ class Command(BaseCommand):
         # Start the Selenium standalone server if it's needed
         selenium_process = None
         if browser in ['opera', 'safari']:
-            _jar_dir, jar_name = os.path.split(SELENIUM_JAR)
+            selenium_jar = settings.SELENIUM_JAR_PATH
+            if len(selenium_jar) < 5:
+                self.stdout.write('You need to configure SELENIUM_JAR_PATH')
+                return
+            _jar_dir, jar_name = os.path.split(selenium_jar)
             # Is it already running?
             process = Popen(['ps -e | grep "%s"' % jar_name[:-4]],
                             shell=True, stdout=PIPE)
@@ -80,7 +79,7 @@ class Command(BaseCommand):
             if not running:
                 self.stdout.write('Starting the Selenium standalone server')
                 output = OutputMonitor()
-                selenium_process = Popen(['java', '-jar', SELENIUM_JAR],
+                selenium_process = Popen(['java', '-jar', selenium_jar],
                                          stdout=output.stream.input,
                                          stderr=open(os.devnull, 'w'))
                 ready_log_line = 'Started org.openqa.jetty.jetty.Server'
