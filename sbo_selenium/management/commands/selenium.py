@@ -31,7 +31,23 @@ class Command(BaseCommand):
             help='Number of times to run each test'
         ),
     )
-    option_list = BaseCommand.option_list + custom_options
+    # Accept nose xunit plugin parameters for passthrough
+    xunit_options = (
+        make_option(
+            '--with-xunit',
+            action='store_true',
+            dest='xunit_enabled'
+        ),
+        make_option(
+            '--xunit-file',
+            dest='xunit_file',
+            default='',
+            help=("Path to xml file to store the xunit report in. "
+                  "Default is nosetests.xml in the working directory "
+                  "[NOSE_XUNIT_FILE]")
+        ),
+    )
+    option_list = BaseCommand.option_list + custom_options + xunit_options
 
     def handle(self, *args, **options):
         """
