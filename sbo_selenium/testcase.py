@@ -217,7 +217,7 @@ class SeleniumTestCase(LiveServerTestCase):
         # Create the screenshots directory if it doesn't exist yet
         screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
         if screenshot_dir and not os.path.exists(screenshot_dir):
-            os.mkdir(screenshot_dir)
+            os.makedirs(screenshot_dir)
         super(SeleniumTestCase, cls).setUpClass()
 
     @classmethod
