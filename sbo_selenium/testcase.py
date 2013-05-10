@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import base64
 import httplib
 import json
+import logging
 import os
 import re
 import socket
@@ -22,6 +23,8 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
 from sbo_selenium.conf import settings
+
+logger = logging.getLogger('django.request')
 
 SELECT_TEXT_SOURCE = """
 (function(selector, start, end) {
@@ -99,7 +102,7 @@ def replacement_log_message(self, format, *args):
     """ Replacement for QuitWSGIRequestHandler.log_message() to log to file
     rather than ignore the messages """
     # Don't bother logging requests for admin images or the favicon.
-    if (self.path.startswith(self.admin_media_prefix)
+    if (self.path.startswith(self.admin_static_prefix)
             or self.path == '/favicon.ico'):
         return
     log_file = settings.SELENIUM_LOG_FILE
