@@ -31,8 +31,14 @@ class Command(BaseCommand):
             help='Number of times to run each test'
         ),
     )
-    # Accept nose xunit plugin parameters for passthrough
-    xunit_options = (
+    # Accept parameters for passthrough
+    passthrough_options = (
+        make_option('--noinput',
+            action='store_false',
+            dest='interactive',
+            default=True,
+            help='Tells Django to NOT prompt the user for input of any kind.'
+        ),
         make_option(
             '--with-xunit',
             action='store_true',
@@ -47,7 +53,7 @@ class Command(BaseCommand):
                   "[NOSE_XUNIT_FILE]")
         ),
     )
-    option_list = BaseCommand.option_list + custom_options + xunit_options
+    option_list = BaseCommand.option_list + custom_options + passthrough_options
 
     def handle(self, *args, **options):
         """
