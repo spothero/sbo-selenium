@@ -250,7 +250,8 @@ class SeleniumTestCase(LiveServerTestCase):
         elif self.browser == 'opera':
             self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
         elif self.browser == 'phantomjs':
-            self.sel = PhantomJS()
+            self.sel = PhantomJS(service_args=['--debug=true',
+                                               '--webdriver-loglevel=DEBUG'])
         elif self.browser == 'safari':
             # requires a Safari extension to be built from source and installed
             self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
