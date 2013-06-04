@@ -40,6 +40,11 @@ class Command(BaseCommand):
             help='Tells Django to NOT prompt the user for input of any kind.'
         ),
         make_option(
+            '--with-django-qunit',
+            action='store_true',
+            dest='django_qunit_enabled'
+        ),
+        make_option(
             '--with-xunit',
             action='store_true',
             dest='xunit_enabled'

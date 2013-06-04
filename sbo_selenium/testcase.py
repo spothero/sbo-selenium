@@ -98,7 +98,15 @@ def replacement_get_stderr(self):
         return os.devnull
 
 
-def replacement_log_message(self, format, *args):
+def replacement_log_exception(self, exc_info):
+    """Implementation of log_exception() for QuietWSGIRequestHandler which logs
+    errors instead of dumping them to stderr (where they get mixed up with the
+    test output).
+    """
+    logger.error('QuietWSGIRequestHandler exception:', exc_info=exc_info)
+
+
+def replacement_log_message(self, format_str, *args):
     """ Replacement for QuitWSGIRequestHandler.log_message() to log to file
     rather than ignore the messages """
     # Don't bother logging requests for admin images or the favicon.
@@ -109,7 +117,7 @@ def replacement_log_message(self, format, *args):
     if not log_file:
         return
 
-    msg = "[%s] %s\n" % (self.log_date_time_string(), format % args)
+    msg = "[%s] %s\n" % (self.log_date_time_string(), format_str % args)
 
     # Utilize terminal colors, if available
     if args[1][0] == '2':
@@ -134,9 +142,20 @@ def replacement_log_message(self, format, *args):
 
 
 def replacement_handle_error(self, request, client_address):
-    """ Replacement for StoppableWSGIServer.handle_error() to ignore errors
-    rather than cluttering the test output """
+    """ Errors from the WSGI server itself tend to be harmless ones like
+    "[Errno 32] Broken pipe" (which happens when a browser cancels a request
+    before it finishes because it realizes it already has the asset).  By
+    default these get dumped to stderr where they get confused with the test
+    results, but aren't actually treated as test errors.  We'll just ignore
+    them for now.
+    """
     pass
+
+
+QuietWSGIRequestHandler.get_stderr = replacement_get_stderr
+QuietWSGIRequestHandler.log_exception = replacement_log_exception
+QuietWSGIRequestHandler.log_message = replacement_log_message
+StoppableWSGIServer.handle_error = replacement_handle_error
 
 
 class Wait(WebDriverWait):
@@ -213,10 +232,6 @@ class SeleniumTestCase(LiveServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Hacks to suppress harmless broken pipe errors from output
-        QuietWSGIRequestHandler.get_stderr = replacement_get_stderr
-        QuietWSGIRequestHandler.log_message = replacement_log_message
-        StoppableWSGIServer.handle_error = replacement_handle_error
         # Create the screenshots directory if it doesn't exist yet
         screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
         if screenshot_dir and not os.path.exists(screenshot_dir):
@@ -269,7 +284,8 @@ class SeleniumTestCase(LiveServerTestCase):
             # Want to see what went wrong
             self.screenshot()
         self.report_status(passed)
-        self.sel.quit()
+        if hasattr(self, 'sel'):
+            self.sel.quit()
         super(SeleniumTestCase, self).tearDown()
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~ Selenium operations ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -389,6 +405,12 @@ class SeleniumTestCase(LiveServerTestCase):
         msg = "The color of '%s' should be %s" % (selector, color_string)
         Wait(self.sel).until(correct_color, msg)
         self.screenshot()
+
+    def wait_for_condition(self, expression):
+        """Wait until the provided JavaScript expression returns true."""
+        condition_is_true = lambda driver: driver.execute_script(expression)
+        msg = '"{}" never became true'.format(expression)
+        Wait(self.sel).until(condition_is_true, msg)
 
     def wait_for_element(self, selector):
         element_is_present = lambda driver: driver.find_element_by_css_selector(selector)
