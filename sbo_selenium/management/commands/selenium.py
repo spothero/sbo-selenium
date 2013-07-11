@@ -33,6 +33,14 @@ class Command(BaseCommand):
     )
     # Accept parameters for passthrough
     passthrough_options = (
+        make_option(
+            '-e', '--exclude',
+            action='append',
+            dest='exclude',
+            metavar='REGEX',
+            help="Don't run tests that match regular "
+            "expression [NOSE_EXCLUDE]"
+        ),
         make_option('--noinput',
             action='store_false',
             dest='interactive',
