@@ -362,8 +362,8 @@ class SeleniumTestCase(LiveServerTestCase):
         if hasattr(self, 'sauce_user_name'):
             # Sauce Labs is taking screenshots for us
             return
-        if self.browser == 'htmlunit':
-            # Doesn't support screenshots
+        if not hasattr(self, 'browser') or self.browser == 'htmlunit':
+            # Can't take screenshots
             return
         screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
         if not screenshot_dir:
