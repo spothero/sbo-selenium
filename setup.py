@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 
-version = '0.3.5'
+version = '0.3.6'
 
 setup(
     name="sbo-selenium",
@@ -19,7 +19,11 @@ setup(
     author_email='',
     url='',
     license='',
-    include_package_data=True,
+    package_data={
+        'sbo_selenium': [
+            'static/js/*.js',
+        ],
+    },
     install_requires=[
         'Django>=1.5.1,<1.6',
         'django-nose',

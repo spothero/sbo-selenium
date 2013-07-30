@@ -26,6 +26,12 @@ from sbo_selenium.conf import settings
 
 logger = logging.getLogger('django.request')
 
+ADD_ACCESSIBILITY_SCRIPT = """
+var script = document.createElement('script');
+script.src = '/static/js/axs_testing.js';
+document.body.appendChild(script);
+"""
+
 SELECT_TEXT_SOURCE = """
 (function(selector, start, end) {
     var children,
@@ -319,6 +325,24 @@ class SeleniumTestCase(LiveServerTestCase):
         msg = "'%s' should be visible" % selector
         assert element.is_displayed(), msg
 
+    def audit_accessibility(self):
+        """ Check for accessibility violations using the JavaScript library
+        from Chrome's Developer Tools. """
+        # First add the library to the page
+        script = ''
+        for line in ADD_ACCESSIBILITY_SCRIPT.splitlines():
+            script += line.strip()
+        self.sel.execute_script(script)
+        # Wait for the script to finish loading
+        time.sleep(1)
+        #self.wait_for_condition('typeof axs !== "undefined";')
+        # Now run the audit and inspect the results
+        self.sel.execute_script('axs_audit_results = axs.Audit.run();')
+        failed = self.sel.execute_script('return axs_audit_results.some(function (element, index, array) { return element.result === "FAIL" });')
+        if failed:
+            report = self.sel.execute_script('return axs.Audit.createReport(axs_audit_results);')
+            raise self.failureException(report)
+
     def click(self, selector):
         """ Wait until the element matching the selector is visible """
         element = self.wait_for_element(selector)
@@ -414,7 +438,7 @@ class SeleniumTestCase(LiveServerTestCase):
 
     def wait_for_element(self, selector):
         element_is_present = lambda driver: driver.find_element_by_css_selector(selector)
-        msg = "An elment matching '%s' should be on the page" % selector
+        msg = "An element matching '%s' should be on the page" % selector
         element = Wait(self.sel).until(element_is_present, msg)
         self.screenshot()
         return element
