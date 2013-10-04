@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 
-version = '0.3.6'
+version = '0.3.7'
 
 setup(
     name="sbo-selenium",
@@ -27,7 +27,7 @@ setup(
     install_requires=[
         'Django>=1.5.1,<1.6',
         'django-nose',
-        'selenium>=2.33.0',
+        'selenium>=2.35.0',
     ],
     entry_points="""
     # -*- Entry points: -*-

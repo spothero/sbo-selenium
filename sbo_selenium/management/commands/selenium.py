@@ -6,6 +6,8 @@ from subprocess import Popen, PIPE
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
+from django_nose.management.commands.test import Command as TestCommand
+
 from sbo_selenium.conf import settings
 from sbo_selenium.utils import OutputMonitor
 
@@ -31,42 +33,7 @@ class Command(BaseCommand):
             help='Number of times to run each test'
         ),
     )
-    # Accept parameters for passthrough
-    passthrough_options = (
-        make_option(
-            '-e', '--exclude',
-            action='append',
-            dest='exclude',
-            metavar='REGEX',
-            help="Don't run tests that match regular "
-            "expression [NOSE_EXCLUDE]"
-        ),
-        make_option('--noinput',
-            action='store_false',
-            dest='interactive',
-            default=True,
-            help='Tells Django to NOT prompt the user for input of any kind.'
-        ),
-        make_option(
-            '--with-django-qunit',
-            action='store_true',
-            dest='django_qunit_enabled'
-        ),
-        make_option(
-            '--with-xunit',
-            action='store_true',
-            dest='xunit_enabled'
-        ),
-        make_option(
-            '--xunit-file',
-            dest='xunit_file',
-            default='',
-            help=("Path to xml file to store the xunit report in. "
-                  "Default is nosetests.xml in the working directory "
-                  "[NOSE_XUNIT_FILE]")
-        ),
-    )
-    option_list = BaseCommand.option_list + custom_options + passthrough_options
+    option_list = TestCommand.option_list + custom_options
 
     def handle(self, *args, **options):
         """
