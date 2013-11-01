@@ -52,10 +52,12 @@ class Command(BaseCommand):
                         stderr=open(os.devnull, 'w'))
         process.wait()
 
-        # Delete any old log and screenshots
+        # Clear any old log and screenshots
         log_file = settings.SELENIUM_LOG_FILE
         if log_file and os.path.isfile(log_file):
-            os.remove(log_file)
+            # Do not just delete it, that messes up any file loggers using it
+            with open(log_file, 'w') as f:
+                f.write('')
         screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
         if screenshot_dir and os.path.isdir(screenshot_dir):
             rmtree(screenshot_dir)

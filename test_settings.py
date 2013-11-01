@@ -4,6 +4,7 @@ DEBUG = False
 JS_DEBUG = False
 ALLOWED_HOSTS = ['localhost']
 DJANGO_LIVE_TEST_SERVER_ADDRESS = 'localhost:9090'
+SELENIUM_TIMEOUT = 1
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -26,6 +27,8 @@ DATABASES = {
 }
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
+LOG_DIR = os.path.join(ROOT_PATH, 'log')
+SELENIUM_LOG_FILE = os.path.join(LOG_DIR, 'tests.log')
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
@@ -110,6 +113,50 @@ SPHINX_PYTHON_EXCLUDE = [
     'setup.py',
     'test_settings.py',
 ]
+
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'simple': {
+            'format': '[%(levelname)s] [%(asctime)s] [%(name)s]: %(message)s'
+        },
+    },
+    'handlers': {
+        # nose installs handlers that only show output for failed tests, but they
+        # can omit errors in setup and teardown; log everything to file also
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': SELENIUM_LOG_FILE,
+            'formatter': 'simple',
+            'level': 'DEBUG',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'sbo_selenium': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'selenium': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    }
+}
 
 NOSE_ARGS = [
     '--nocapture',

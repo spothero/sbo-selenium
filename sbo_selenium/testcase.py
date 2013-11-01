@@ -15,7 +15,7 @@ from django.test import LiveServerTestCase
 from django.test.testcases import QuietWSGIRequestHandler, StoppableWSGIServer
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, \
-    StaleElementReferenceException, TimeoutException
+    StaleElementReferenceException, TimeoutException, WebDriverException
 from selenium.webdriver import Chrome, DesiredCapabilities, Firefox, PhantomJS
 from selenium.webdriver.remote.webdriver import WebDriver as RemoteWebDriver
 from selenium.webdriver.support.color import Color
@@ -113,38 +113,13 @@ def replacement_log_exception(self, exc_info):
 
 
 def replacement_log_message(self, format_str, *args):
-    """ Replacement for QuitWSGIRequestHandler.log_message() to log to file
-    rather than ignore the messages """
+    """ Replacement for QuitWSGIRequestHandler.log_message() to log messages
+    rather than ignore them """
     # Don't bother logging requests for admin images or the favicon.
     if (self.path.startswith(self.admin_static_prefix)
             or self.path == '/favicon.ico'):
         return
-    log_file = settings.SELENIUM_LOG_FILE
-    if not log_file:
-        return
-
-    msg = "[%s] %s\n" % (self.log_date_time_string(), format_str % args)
-
-    # Utilize terminal colors, if available
-    if args[1][0] == '2':
-        # Put 2XX first, since it should be the common case
-        msg = self.style.HTTP_SUCCESS(msg)
-    elif args[1][0] == '1':
-        msg = self.style.HTTP_INFO(msg)
-    elif args[1] == '304':
-        msg = self.style.HTTP_NOT_MODIFIED(msg)
-    elif args[1][0] == '3':
-        msg = self.style.HTTP_REDIRECT(msg)
-    elif args[1] == '404':
-        msg = self.style.HTTP_NOT_FOUND(msg)
-    elif args[1][0] == '4':
-        msg = self.style.HTTP_BAD_REQUEST(msg)
-    else:
-        # Any 5XX, or any other response
-        msg = self.style.HTTP_SERVER_ERROR(msg)
-
-    with open(log_file, "a") as out:
-        out.write(msg)
+    logger.info(format_str % args)
 
 
 def replacement_handle_error(self, request, client_address):
@@ -186,6 +161,8 @@ class Wait(WebDriverWait):
                 pass
             except StaleElementReferenceException:
                 pass
+            except WebDriverException:
+                pass
             time.sleep(self._poll)
             if(time.time() > end_time):
                 break
@@ -203,6 +180,8 @@ class Wait(WebDriverWait):
             except NoSuchElementException:
                 return True
             except StaleElementReferenceException:
+                pass
+            except WebDriverException:
                 pass
             time.sleep(self._poll)
             if(time.time() > end_time):
@@ -430,10 +409,11 @@ class SeleniumTestCase(LiveServerTestCase):
         Wait(self.sel).until(correct_color, msg)
         self.screenshot()
 
-    def wait_for_condition(self, expression):
+    def wait_for_condition(self, expression, msg=None):
         """Wait until the provided JavaScript expression returns true."""
         condition_is_true = lambda driver: driver.execute_script(expression)
-        msg = '"{}" never became true'.format(expression)
+        if not msg:
+            msg = '"{}" never became true'.format(expression)
         Wait(self.sel).until(condition_is_true, msg)
 
     def wait_for_element(self, selector):
