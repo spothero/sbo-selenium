@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+#
+# Created by Jeremy Bowman on Tue Mar 25 22:33:42 EDT 2014
+# Copyright (c) 2014 Safari Books Online. All rights reserved.
+#
+# This script is always run from the project root
+
+import glob
+import os
+import shlex
+import subprocess
+    
+
+def popen(cmd):
+    args = shlex.split(cmd)
+    return subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+
+diff = popen('git diff --name-only HEAD@{1} HEAD')
+changed_files = {filename.strip() for filename in diff}
+
+if any('git-hooks' in f for f in changed_files):
+    # update git hooks
+    os.system('git-hooks/install-hooks')
+
+# always delete pyc files
+print 'Deleting .pyc files in project dir'
+os.system("find . -name '*pyc' -delete")
+
+virtual_env = os.environ.get('VIRTUAL_ENV')
+if virtual_env:
+    python = os.path.join(virtual_env, 'bin', 'python')
+
+    # put stuff that requires virtualenv here
+
+    # delete all .pyc files in the virtual env
+    print 'Deleting .pyc files in virtualenv'
+    os.system("find %s -name '*pyc' -delete" % virtual_env)
+
+    requirements_files = set(glob.glob('requirements/*.txt'))
+    requirements_files.add('setup.py')
+    if changed_files.intersection(requirements_files):
+        os.system("pip install pip==1.5.4")  # match requirements/tests.txt
+        os.system("pip install --upgrade --editable ./")
+        os.system("pip install --requirement requirements/tests.txt")

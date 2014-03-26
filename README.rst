@@ -8,19 +8,19 @@ applications as well.
 Installation
 ------------
 
-Add 'sbo-selenium' to setup.py for the application being tested, and add
-'sbo_selenium' to the INSTALLED_APPS setting.  To actually install the library,
-rerun setup.py::
+Add 'sbo-selenium' to the requirements for the application being tested, and add
+'sbo_selenium' to the INSTALLED_APPS setting.  Install the new dependency as
+usual for the containing project; for SBO packages this is typically::
 
-    python setup.py develop --always-unzip
+    pip install -r requirements/tests.txt
 
 To run tests using a particular browser, it needs to already be installed.  To
 drive Chrome via Selenium, you'll need to install both Chrome itself and then
 chromedriver:
  
-1. Download the correct ChromeDriver from http://code.google.com/p/chromedriver/downloads/list
-2. Put the binary, chromedriver, somewhere on your path 
-   (ex: /usr/local/bin/chromedriver)
+1. Download the correct ChromeDriver from http://chromedriver.storage.googleapis.com/index.html
+2. Put the binary, ``chromedriver``, somewhere on your path
+   (ex: ``/usr/local/bin/chromedriver``)
 
 On Mac OS X, if you have Homebrew installed you can instead run
 ``brew install chromedriver``.
@@ -29,14 +29,17 @@ To test Mobile Safari in the iPhone simulator, you'll first need to do the
 following:
 
 * Install Xcode
-* From the Downloads tab of the Xcode Preferences dialog, install "Command Line Tools" and one of the iOS Simulator components (probably the latest one)
+* From the Downloads tab of the Xcode Preferences dialog, install
+  "Command Line Tools" and one of the iOS Simulator components (probably the
+  latest one)
 * Download and run `Appium <http://appium.io/>`_
 * Check the "Use Mobile Safari" checkbox
-* If you want to test in the iPad form factor, check the "Force Device" checkbox and make sure "iPad" is selected next to it
+* If you want to test in the iPad form factor, check the "Force Device"
+  checkbox and make sure "iPad" is selected next to it
 * Click the "Launch" button
 
 To test Opera or Safari, you'll need to download the Selenium standalone server
-`jar file <http://selenium.googlecode.com/files/selenium-server-standalone-2.32.0.jar>`_
+`jar file <http://selenium-release.storage.googleapis.com/2.40/selenium-server-standalone-2.40.0.jar>`_
 and configure the path to it in the SELENIUM_JAR_PATH setting
 described below.
 

@@ -1,0 +1,16 @@
+# Core dependencies common to all Python interpreters
+
+# As a public package, version requirements are rather lax
+# The currently preferred versions are specified in tests.txt for testing
+
+# Package manager, also used to parse this file in setup.py
+pip>=1.5
+
+# Our web application framework
+Django>=1.5
+
+# Our testing framework
+django-nose>=1.2
+
+# Python's Selenium driver (for browser automation)
+selenium>=2.39.0

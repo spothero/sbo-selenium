@@ -8,12 +8,14 @@
 .#*
 \#*
 *~
+docs/python
 storage
 media
 dist
 .noseids
 .DS_Store
 ve
+.idea
 .project
 .pydevproject
 .settings
