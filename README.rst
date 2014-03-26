@@ -54,7 +54,7 @@ runs:
   described in the Django testing documentation).  Default value is
   ``'localhost:9090'``.
 * ``SELENIUM_DEFAULT_BROWSER`` - The web browser to use for tests when none is
-  specified.  Default value is ``chrome``.
+  specified.  Default value is ``'chrome'``.
 * ``SELENIUM_DEFAULT_TESTS`` - The Selenium test(s) to be run by default when
   none are specified.  Should be an array of nose-compatible test
   specifications (see `Running Tests`_ below for examples).  Default value is
