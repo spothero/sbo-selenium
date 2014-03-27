@@ -1,0 +1,22 @@
+# Additional dependencies for the test suite
+
+# Indirect dependencies first, exact versions for consistency
+
+# django-nose
+nose==1.3.0
+
+# tox
+py==1.4.20
+virtualenv==1.11.4
+
+# Exact versions of the base dependencies
+
+pip==1.5.4
+Django==1.6.2
+django-nose==1.2
+selenium==2.40.0
+
+# Direct dependencies for running tests
+
+# For managing test environments
+tox==1.7.0

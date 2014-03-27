@@ -10,7 +10,7 @@ import os
 
 
 class InputStreamChunker(threading.Thread):
-    '''
+    """
     Threaded object / code that mediates reading output from a stream,
     detects "separation markers" in the stream and spits out chunks
     of original stream, split when ends of chunk are encountered.
@@ -22,28 +22,31 @@ class InputStreamChunker(threading.Thread):
     on threading.Event flags.
 
     Usage:
-    - instantiate this object
-    - give our input pipe as "stdout" to other subprocess and start it:
-        Popen(..., stdout = th.input, ...)
-    - (optional) subscribe to data_available event
-    - pull resulting file-like objects off .data
-      (if you are "messing" with .data from outside of the thread,
-       be curteous and wrap the thread-unsafe manipulations between:
-       obj.data_unoccupied.clear()
-       ... mess with .data
-       obj.data_unoccupied.set()
-       The thread will not touch obj.data for the duration and will
-       block reading.)
+
+    * instantiate this object
+    * give our input pipe as "stdout" to other subprocess and start it::
+          Popen(..., stdout = th.input, ...)
+    * (optional) subscribe to data_available event
+    * pull resulting file-like objects off .data (if you are "messing" with
+      .data from outside of the thread, be courteous and wrap the
+      thread-unsafe manipulations between::
+
+          obj.data_unoccupied.clear()
+          ... mess with .data
+          obj.data_unoccupied.set()
+
+      The thread will not touch obj.data for the duration and will block
+      reading.)
 
     License: Public domain
     Absolutely no warranty provided
-    '''
+    """
     def __init__(self, delimiter=None, outputObjConstructor=None):
-        '''
+        """
         delimiter - the string that will be considered a delimiter for the
-        stream outputObjConstructor - instanses of these will be attached to
+        stream outputObjConstructor - instances of these will be attached to
         self.data array (intantiator_pointer, args, kw)
-        '''
+        """
         super(InputStreamChunker, self).__init__()
 
         self._data_available = threading.Event()
@@ -64,45 +67,45 @@ class InputStreamChunker(threading.Thread):
 
     @property
     def data_available(self):
-        '''returns a threading.Event instance pointer that is
+        """returns a threading.Event instance pointer that is
         True (and non-blocking to .wait() ) when we attached a
         new IO obj to the .data array.
         Code consuming the array may decide to set it back to False
-        if it's done with all chunks and wants to be blocked on .wait()'''
+        if it's done with all chunks and wants to be blocked on .wait()"""
         return self._data_available
 
     @property
     def data_unoccupied(self):
-        '''returns a threading.Event instance pointer that is normally
+        """returns a threading.Event instance pointer that is normally
         True (and non-blocking to .wait() ) Set it to False with .clear()
         before you start non-thread-safe manipulations (changing) .data
-        array. Set it back to True with .set() when you are done'''
+        array. Set it back to True with .set() when you are done"""
         return self._data_unoccupied
 
     @property
     def data(self):
-        '''returns a list of input chunkes (file-like objects) captured
+        """returns a list of input chunkes (file-like objects) captured
         so far. This is a "stack" of sorts. Code consuming the chunks
         would be responsible for disposing of the file-like objects.
-        By default, the file-like objects are instances of cStringIO'''
+        By default, the file-like objects are instances of cStringIO"""
         return self._data
 
     @property
     def input(self):
-        '''This is a file descriptor (not a file-like).
+        """This is a file descriptor (not a file-like).
         It's the input end of our pipe which you give to other process
-        to be used as stdout pipe for that process'''
+        to be used as stdout pipe for that process"""
         return self._w
 
     def flush(self):
-        '''Normally a read on a pipe is blocking.
+        """Normally a read on a pipe is blocking.
         To get things moving (make the subprocess yield the buffer,
         we inject our chunk delimiter into self.input
 
         This is useful when primary subprocess does not write anything
         to our in pipe, but we need to make internal pipe reader let go
         of the pipe and move on with things.
-        '''
+        """
         os.write(self._w, ''.join(self._stream_delimiter))
 
     def stop(self):
@@ -124,13 +127,14 @@ class InputStreamChunker(threading.Thread):
             pass
 
     def run(self):
-        ''' Plan:
-        - We read into a fresh instance of IO obj until marker encountered.
-        - When marker is detected, we attach that IO obj to "results" array
+        """ Plan:
+
+        * We read into a fresh instance of IO obj until marker encountered.
+        * When marker is detected, we attach that IO obj to "results" array
           and signal the calling code (through threading.Event flag) that
           results are available
-        - repeat until .stop() was called on the thread.
-        '''
+        * repeat until .stop() was called on the thread.
+        """
         marker = ['' for l in self._stream_delimiter]  # '' is there on purpose
         tf = self._obj[0](*self._obj[1], **self._obj[2])
         while not self._stop:

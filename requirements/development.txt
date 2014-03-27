@@ -1,0 +1,20 @@
+# Utilities that can be very useful for Django application development
+
+# Indirect dependencies to pin for consistency
+
+# sbo-sphinx -> Sphinx -> Jinja2
+MarkupSafe==0.18
+
+# sbo-sphinx-> Sphinx
+docutils==0.11
+Jinja2==2.7.2
+Pygments==1.6
+
+# sbo-sphinx
+Sphinx==1.2.2
+sphinx_rtd_theme==0.1.5
+
+# Direct dependencies
+
+# Utilities for managing technical documentation
+sbo-sphinx==2.0.2
