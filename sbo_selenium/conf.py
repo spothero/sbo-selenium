@@ -35,6 +35,21 @@ class LazySettings(object):
         return getattr(django_settings, 'SELENIUM_JAR_PATH', '')
 
     @property
+    def SELENIUM_SAUCE_API_KEY(self):
+        """API key for the Sauce Labs account to use for running tests"""
+        return getattr(django_settings, 'SELENIUM_SAUCE_API_KEY', '')
+
+    @property
+    def SELENIUM_SAUCE_CONNECT_PATH(self):
+        """Absolute path to the Sauce Connect binary (for Sauce Labs)"""
+        return getattr(django_settings, 'SELENIUM_SAUCE_CONNECT_PATH', '')
+
+    @property
+    def SELENIUM_SAUCE_USERNAME(self):
+        """Username for the Sauce Labs account to use for running tests"""
+        return getattr(django_settings, 'SELENIUM_SAUCE_USERNAME', '')
+
+    @property
     def SELENIUM_SCREENSHOT_DIR(self):
         """Directory in which to store screenshots"""
         return getattr(django_settings, 'SELENIUM_SCREENSHOT_DIR', '')

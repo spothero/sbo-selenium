@@ -10,7 +10,10 @@ pip>=1.5
 Django>=1.5
 
 # Our testing framework
-django-nose>=1.2
+django-nose
+
+# HTTP library for calls to Sauce REST API for reporting test results
+requests
 
 # Python's Selenium driver (for browser automation)
-selenium>=2.39.0
+selenium
