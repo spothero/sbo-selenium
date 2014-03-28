@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-import base64
-import httplib
 import json
 import logging
 import os
@@ -13,6 +11,7 @@ import time
 from nose.tools import assert_raises
 from django.test import LiveServerTestCase
 from django.test.testcases import QuietWSGIRequestHandler, StoppableWSGIServer
+import requests
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, \
     StaleElementReferenceException, TimeoutException, WebDriverException
@@ -313,8 +312,7 @@ class SeleniumTestCase(LiveServerTestCase):
             script += line.strip()
         self.sel.execute_script(script)
         # Wait for the script to finish loading
-        time.sleep(1)
-        #self.wait_for_condition('typeof axs !== "undefined";')
+        self.wait_for_condition('return axs.AuditRule.specs.videoWithoutCaptions !== "undefined";')
         # Now run the audit and inspect the results
         self.sel.execute_script('axs_audit_results = axs.Audit.run();')
         failed = self.sel.execute_script('return axs_audit_results.some(function (element, index, array) { return element.result === "FAIL" });')
@@ -409,11 +407,13 @@ class SeleniumTestCase(LiveServerTestCase):
         Wait(self.sel).until(correct_color, msg)
         self.screenshot()
 
-    def wait_for_condition(self, expression, msg=None):
-        """Wait until the provided JavaScript expression returns true."""
-        condition_is_true = lambda driver: driver.execute_script(expression)
+    def wait_for_condition(self, return_statement, msg=None):
+        """Wait until the provided JavaScript expression returns true.
+        Note: for this to work, the expression must include the "return"
+        keyword, not just the expression to be evaluated."""
+        condition_is_true = lambda driver: driver.execute_script(return_statement)
         if not msg:
-            msg = '"{}" never became true'.format(expression)
+            msg = '"{}" never became true'.format(return_statement)
         Wait(self.sel).until(condition_is_true, msg)
 
     def wait_for_element(self, selector):
@@ -471,16 +471,16 @@ class SeleniumTestCase(LiveServerTestCase):
         """ Wait until the specified select option appears; the entire
         select widget may be replaced in the process """
         end_time = time.time() + settings.SELENIUM_TIMEOUT
-        while(True):
+        while True:
             try:
                 select = Select(self.sel.find_element_by_css_selector(selector))
                 for option in select.options:
                     if option.text == option_text:
                         return option
-            except (NoSuchElementException, StaleElementReferenceException) as e:
+            except (NoSuchElementException, StaleElementReferenceException):
                 pass
             time.sleep(settings.SELENIUM_POLL_FREQUENCY)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 break
         raise TimeoutException("Select option should have been added")
 
@@ -488,16 +488,16 @@ class SeleniumTestCase(LiveServerTestCase):
         """ Wait until the specified select option is disabled; the entire
         select widget may be replaced in the process """
         end_time = time.time() + settings.SELENIUM_TIMEOUT
-        while(True):
+        while True:
             try:
                 select = Select(self.sel.find_element_by_css_selector(selector))
                 for option in select.options:
                     if option.text == option_text and not option.is_enabled():
                         return option
-            except (NoSuchElementException, StaleElementReferenceException) as e:
+            except (NoSuchElementException, StaleElementReferenceException):
                 pass
             time.sleep(settings.SELENIUM_POLL_FREQUENCY)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 break
         raise TimeoutException("Select option should have been disabled")
 
@@ -514,7 +514,7 @@ class SeleniumTestCase(LiveServerTestCase):
         """ Wait until the element matching the provided selector has been
         moved offscreen (deliberately, not just scrolled out of view) """
         end_time = time.time() + settings.SELENIUM_TIMEOUT
-        while(True):
+        while True:
             try:
                 element = self.sel.find_element_by_css_selector(selector)
                 location = element.location
@@ -525,10 +525,10 @@ class SeleniumTestCase(LiveServerTestCase):
                 if location["x"] + size["width"] <= 0:
                     self.screenshot()
                     return True
-            except (NoSuchElementException, StaleElementReferenceException) as e:
+            except (NoSuchElementException, StaleElementReferenceException):
                 pass
             time.sleep(settings.SELENIUM_POLL_FREQUENCY)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 break
         raise TimeoutException("'%s' should be offscreen" % selector)
 
@@ -536,17 +536,17 @@ class SeleniumTestCase(LiveServerTestCase):
         """ Wait until the element matching the provided selector has been
         moved into the viewable page """
         end_time = time.time() + settings.SELENIUM_TIMEOUT
-        while(True):
+        while True:
             try:
                 element = self.sel.find_element_by_css_selector(selector)
                 location = element.location
                 if location["x"] >= 0 and location["y"] >= 0:
                     self.screenshot()
                     return True
-            except (NoSuchElementException, StaleElementReferenceException) as e:
+            except (NoSuchElementException, StaleElementReferenceException):
                 pass
             time.sleep(settings.SELENIUM_POLL_FREQUENCY)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 break
         raise TimeoutException("'%s' should be offscreen" % selector)
 
@@ -574,34 +574,47 @@ class SeleniumTestCase(LiveServerTestCase):
         host = os.getenv("SELENIUM_HOST", "ondemand.saucelabs.com")
         port = os.getenv("SELENIUM_PORT", "80")
         executor = "".join(["http://", host, ":", port, '/wd/hub'])
-        platform = os.getenv("SELENIUM_PLATFORM", "Windows 2008")
+        platform = os.getenv("SELENIUM_PLATFORM", "Windows 7")
         version = os.getenv("SELENIUM_VERSION", "")
         self.sauce_user_name = os.getenv("SAUCE_USER_NAME")
-        api_key = os.getenv("SAUCE_API_KEY")
-        self.sauce_auth = base64.encodestring('%s:%s' % (self.sauce_user_name,
-                                                         api_key))[:-1]
+        self.sauce_api_key = os.getenv("SAUCE_API_KEY")
+        build_number = os.getenv('BUILD_NUMBER')
+        job_name = os.getenv('JOB_NAME')
+        # http://code.google.com/p/selenium/wiki/DesiredCapabilities
+        # https://saucelabs.com/docs/additional-config#desired-capabilities
         caps = {
-            "platform": platform,
-            "browserName": self.browser,
-            "version": version,
-            "javascriptEnabled": True,
-            "name": self._testMethodName,
-            "username": self.sauce_user_name,
-            "accessKey": api_key
+            'accessKey': self.sauce_api_key,
+            'capture-html': True,
+            'browserName': self.browser,
+            'javascriptEnabled': True,
+            'name': self.id(),
+            'platform': platform,
+            'username': self.sauce_user_name,
+            'version': version,
         }
-        return webdriver.Remote(command_executor=executor,
-                                desired_capabilities=caps)
+        if build_number and job_name:
+            caps['build'] = '{} #{}'.format(job_name, build_number)
+        remote = webdriver.Remote(command_executor=executor,
+                                  desired_capabilities=caps)
+        # Output the Sauce session ID on stdout for Jenkins integration
+        # See https://saucelabs.com/jenkins/5 for details
+        print 'SauceOnDemandSessionID={} job-name={}'.format(remote.session_id, self.id())
+        return remote
 
     def report_status(self, passed):
+        """Report to Sauce Labs whether or not the test passed, so that can be
+        reflected in their UI."""
         if not hasattr(self, 'sauce_user_name'):
             # Not using Sauce Labs for this test
             return
-        # Report failure if any individual test failed or had an error
+        url_pattern = 'http://{}:{}@saucelabs.com/rest/v1/{}/jobs/{}'
+        url = url_pattern.format(self.sauce_user_name,
+                                 self.sauce_api_key,
+                                 self.sauce_user_name,
+                                 self.sel.session_id)
         body_content = json.dumps({"passed": passed})
-        connection = httplib.HTTPConnection("saucelabs.com")
-        url = '/rest/v1/%s/jobs/%s' % (self.sauce_user_name,
-                                       self.sel.session_id)
-        connection.request('PUT', url, body_content,
-                           headers={"Authorization": "Basic %s" % self.sauce_auth})
-        result = connection.getresponse()
-        return result.status == 200
+        headers = {
+            'Content-Type': 'application/json',
+        }
+        response = requests.put(url, body_content, headers=headers)
+        return response.status_code == 200

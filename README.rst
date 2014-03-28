@@ -40,8 +40,11 @@ following:
 
 To test Opera or Safari, you'll need to download the Selenium standalone server
 `jar file <http://selenium-release.storage.googleapis.com/2.40/selenium-server-standalone-2.40.0.jar>`_
-and configure the path to it in the SELENIUM_JAR_PATH setting
+and configure the path to it in the ``SELENIUM_JAR_PATH`` setting
 described below.
+
+Note that all of these browsers and more can be tested using Sauce OnDemand;
+see below for details.
 
 Settings
 --------
@@ -67,6 +70,15 @@ runs:
   uselessness).
 * ``SELENIUM_POLL_FREQUENCY`` - The number of seconds to wait after a failed
   operation before trying again.  Default value is 0.5 seconds.
+* ``SELENIUM_SAUCE_API_KEY`` - The API key for the Sauce Labs account to use
+  for running tests.
+* ``SELENIUM_SAUCE_CONNECT_PATH`` - Absolute path of the
+  `Sauce Connect <https://saucelabs.com/docs/connect>`_ binary, used when
+  testing a site that isn't visible to the internet at large via Sauce Labs.
+  If not set but other parameters indicate Sauce usage, it's assumed that the
+  site being tested is publicly accessible.
+* ``SELENIUM_SAUCE_USERNAME`` - The username for the Sauce Labs account to use
+  for running tests.
 * ``SELENIUM_SCREENSHOT_DIR`` - Absolute path of the directory in which to save
   screenshots taken over the course of running tests (these can be useful for
   debugging test failures).  The directory will be created if it doesn't
@@ -111,7 +123,7 @@ the settings file::
 
 Having a separate settings file for the Selenium tests isn't a requirement, but
 in practice you'll probably want to use different settings for the tests than
-you do for development (for example, to make sure that DEBUG=False).  If you
+you do for development (for example, to make sure that ``DEBUG=False``).  If you
 don't want to type out the settings parameter each time, a simple shell script
 should do the trick::
 
@@ -128,15 +140,16 @@ All the usual methods that nose uses to identify tests should work::
 (Note that a specifying a package, like myapp.tests.selenium when the actual
 tests are defined in modules within that package, does NOT work.)
 
-By default, tests are run in the browser specified by SELENIUM_DEFAULT_BROWSER.
-You can use the -b or --browser parameter to change this::
+By default, tests are run in the browser specified by ``SELENIUM_DEFAULT_BROWSER``.
+You can use the ``-b`` or ``--browser`` parameter to change this::
 
     ./manage.py selenium -b firefox
     ./manage.py selenium --browser=safari
 
 Valid browser names are "chrome", "firefox", "htmlunit", "ios", "opera",
 "phantomjs", and "safari" ("ipad", "iphone", and "ipod" are treated as
-synonyms for "ios", the form factor is chosen in Appium).
+synonyms for "ios", the form factor is chosen in Appium).  Alternatively,
+tests can be run at Sauce Labs; see below for details.
 
 You can also specify the number of times to run the tests (for example, if you
 have a test that is failing intermittently for some reason and want to run it
@@ -144,11 +157,32 @@ a few times to increase the odds of encountering the error)::
 
     ./manage.py selenium -n 5
 
-TODO
-----
+Sauce Labs
+----------
 
-Some things we did before via manual configuration and a fragile shell script
-which still need to be added to this testing framework:
+Instead of running tests in a local browser, they can be run on one in a
+virtual machine hosted at  `Sauce Labs <https://saucelabs.com/home>`_.  Support
+for this in sbo-selenium is designed to play nicely with the Jenkins
+`Sauce OnDemand plugin <https://saucelabs.com/jenkins>`_.  For running tests in
+Jenkins, just install that plugin and configure it for the job you want to
+run.  On a local machine, you'll need to set the ``SELENIUM_SAUCE_*`` Django
+settings described above and use a couple of command-line parameters in
+addition to the ``-b`` browser name setting mentioned previously:
 
-* Android simulator testing
-* Sauce Labs support
+* ``-p`` or ``--platform`` - The name and version of the operating system to
+  use.
+* ``--browser-version`` - The version number of the browser to use.
+
+The valid values for these can be found on the
+`Sauce Labs website <https://saucelabs.com/platforms>`_.
+
+Generating Documentation
+------------------------
+
+Documentation for this package is generated using
+`sbo-sphinx <https://github.com/safarijv/sbo-sphinx>`_.  To generate the docs
+locally with any changes you may have made::
+
+    $ pip install -r requirements/development.txt
+    $ cd docs
+    $ DJANGO_SETTINGS_MODULE=test_settings sphinx-build -b html . _build

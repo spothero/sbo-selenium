@@ -4,7 +4,12 @@ DEBUG = False
 JS_DEBUG = False
 ALLOWED_HOSTS = ['localhost']
 DJANGO_LIVE_TEST_SERVER_ADDRESS = 'localhost:9090'
-SELENIUM_TIMEOUT = 1
+SELENIUM_TIMEOUT = 10
+
+# This is a public repository!  Never commit real data for these!
+SELENIUM_SAUCE_CONNECT_PATH = ''
+SELENIUM_SAUCE_USERNAME = ''
+SELENIUM_SAUCE_API_KEY = ''
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -52,14 +57,14 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
+    # 'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -96,23 +101,6 @@ TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
 # This is itself a UUID that is safe to pass to uuid.uuid3
 SECRET_KEY = '8ff1e795-3e84-4ef2-b64d-c802b9d4469c'
-
-# Sphinx documentation settings
-ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
-SPHINX_EXTERNAL_FILES = ['README.rst']
-SPHINX_INPUT_DIR = 'docs'
-SPHINX_OUTPUT_DIR = 'docs/_build'
-SPHINX_MASTER_DOC = 'index'
-SPHINX_PROJECT_NAME = 'sbo-selenium'
-SPHINX_PROJECT_VERSION = '0.1'
-SPHINX_PYTHON_EXCLUDE = [
-    'dist',
-    'storage',
-    've',
-    'manage.py',
-    'setup.py',
-    'test_settings.py',
-]
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)

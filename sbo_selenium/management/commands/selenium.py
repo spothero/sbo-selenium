@@ -20,27 +20,52 @@ class Command(BaseCommand):
     help = 'Run Selenium tests for this application'
     requires_model_validation = True
     custom_options = (
-        make_option('-b',
+        make_option(
+            '-b',
             '--browser',
-            dest='browser',
+            dest='browser_name',
             default='chrome',
-            help='Browser to run the tests in (default is chrome)'
+            help='Name of the browser to run the tests in (default is chrome)'
         ),
-        make_option('-n',
+        make_option(
+            '-n',
             type='int',
             dest='count',
             default=1,
             help='Number of times to run each test'
         ),
+        make_option(
+            '-p',
+            '--platform',
+            dest='platform',
+            help='OS and version thereof for the Sauce OnDemand VM to use'
+        ),
+        make_option(
+            '--browser-version',
+            dest='browser_version',
+            help='Browser version for the Sauce OnDemand VM to use'
+        )
     )
     option_list = TestCommand.option_list + custom_options
+
+    @staticmethod
+    def clean():
+        """Clear out any old logs and screenshots"""
+        log_file = settings.SELENIUM_LOG_FILE
+        if log_file and os.path.isfile(log_file):
+            # Do not just delete it, that messes up any file loggers using it
+            with open(log_file, 'w') as f:
+                f.write('')
+        screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
+        if screenshot_dir and os.path.isdir(screenshot_dir):
+            rmtree(screenshot_dir, ignore_errors=True)
 
     def handle(self, *args, **options):
         """
         Run the specified Selenium test(s) the indicated number of times in
         the specified browser.
         """
-        browser = options['browser']
+        browser_name = options['browser_name']
         count = options['count']
         if len(args) > 0:
             tests = list(args)
@@ -53,56 +78,20 @@ class Command(BaseCommand):
         process.wait()
 
         # Clear any old log and screenshots
-        log_file = settings.SELENIUM_LOG_FILE
-        if log_file and os.path.isfile(log_file):
-            # Do not just delete it, that messes up any file loggers using it
-            with open(log_file, 'w') as f:
-                f.write('')
-        screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
-        if screenshot_dir and os.path.isdir(screenshot_dir):
-            rmtree(screenshot_dir)
+        self.clean()
 
-        # Start the Selenium standalone server if it's needed
+        sc_process = None
         selenium_process = None
-        if browser in ['opera', 'safari']:
-            selenium_jar = settings.SELENIUM_JAR_PATH
-            if len(selenium_jar) < 5:
-                self.stdout.write('You need to configure SELENIUM_JAR_PATH')
+        if 'platform' in options and settings.SELENIUM_SAUCE_CONNECT_PATH:
+            running, sc_process = self.verify_sauce_connect_is_running()
+            if not running:
                 return
-            _jar_dir, jar_name = os.path.split(selenium_jar)
-            # Is it already running?
-            process = Popen(['ps -e | grep "%s"' % jar_name[:-4]],
-                            shell=True, stdout=PIPE)
-            (grep_output, _grep_error) = process.communicate()
-            lines = grep_output.split('\n')
-            running = False
-            for line in lines:
-                if jar_name in line:
-                    self.stdout.write('Selenium standalone server is already running')
-                    running = True
+        elif browser_name in ['opera', 'safari']:
+            running, selenium_process = self.verify_selenium_server_is_running()
             if not running:
-                self.stdout.write('Starting the Selenium standalone server')
-                output = OutputMonitor()
-                selenium_process = Popen(['java', '-jar', selenium_jar],
-                                         stdout=output.stream.input,
-                                         stderr=open(os.devnull, 'w'))
-                ready_log_line = 'Started org.openqa.jetty.jetty.Server'
-                if not output.wait_for(ready_log_line, 10):
-                    self.stdout.write('Timeout starting the Selenium server:')
-                    self.stdout.write('\n'.join(output.lines))
-                    return
-        elif browser in ['ipad', 'iphone']:
-            # Is Appium running?
-            process = Popen(['ps -e | grep "Appium"'], shell=True, stdout=PIPE)
-            (grep_output, _grep_error) = process.communicate()
-            lines = grep_output.split('\n')
-            running = False
-            for line in lines:
-                if 'Appium.app' in line:
-                    self.stdout.write('Appium is already running')
-                    running = True
-            if not running:
-                self.stdout.write('Please launch and configure Appium first')
+                return
+        elif browser_name in ['ipad', 'iphone']:
+            if not self.verify_appium_is_running():
                 return
 
         # Ugly hack: make it so django-nose won't have nosetests choke on our
@@ -110,16 +99,144 @@ class Command(BaseCommand):
         BaseCommand.option_list += self.custom_options
 
         # Configure and run the tests
-        env = os.environ
-        address = settings.DJANGO_LIVE_TEST_SERVER_ADDRESS
-        env['DJANGO_LIVE_TEST_SERVER_ADDRESS'] = address
-        test_args = ['test'] + tests
-        env['SELENIUM_BROWSER'] = browser
-        for i in range(count):
-            msg = 'Test run %d using %s' % (i + 1, browser)
-            self.stdout.write(msg)
-            call_command(*test_args)
+        self.update_environment(options)
+        self.run_tests(tests, browser_name, count)
+
+        # Kill the Selenium standalone server, if running
+        if sc_process:
+            sc_process.kill()
 
         # Kill the Selenium standalone server, if running
         if selenium_process:
             selenium_process.kill()
+
+    def run_tests(self, tests, browser_name, count):
+        """Configure and run the tests"""
+        test_args = ['test'] + tests
+        for i in range(count):
+            msg = 'Test run %d using %s' % (i + 1, browser_name)
+            self.stdout.write(msg)
+            call_command(*test_args)
+
+    @staticmethod
+    def update_environment(options):
+        """
+        Populate the environment variables that need to be added for test
+        execution to work correctly.  Most (but not all) of these are to match
+        what the Jenkins Sauce OnDemand plugin would use for the test
+        configuration that was specified on the command line.
+        """
+        env = os.environ
+        env['SELENIUM_BROWSER'] = options['browser_name']
+        # https://docs.djangoproject.com/en/1.6/topics/testing/tools/#liveservertestcase
+        env['DJANGO_LIVE_TEST_SERVER_ADDRESS'] = settings.DJANGO_LIVE_TEST_SERVER_ADDRESS
+        platform = options['platform']
+        browser_version = options['browser_version']
+        if not platform or not browser_version:
+            # None of the following Sauce OnDemand stuff applies
+            return
+        if settings.SELENIUM_SAUCE_CONNECT_PATH:
+            host = 'localhost'
+            port = '4445'
+        else:
+            host = 'ondemand.saucelabs.com'
+            port = '80'
+        env.update({
+            'SAUCE_API_KEY': settings.SELENIUM_SAUCE_API_KEY,
+            'SAUCE_USER_NAME': settings.SELENIUM_SAUCE_USERNAME,
+            'SELENIUM_BROWSER': options['browser_name'],
+            'SELENIUM_HOST': host,
+            'SELENIUM_PLATFORM': platform,
+            'SELENIUM_PORT': port,
+            'SELENIUM_VERSION': browser_version,
+        })
+
+    def verify_sauce_connect_is_running(self):
+        """
+        Start Sauce Connect, if it isn't already running.  Returns a tuple of
+        two elements:
+
+        * A boolean which is True if Sauce Connect is now running
+        * The Popen object representing the process so it can be terminated
+          later; if it was already running, this value is "None"
+        """
+        sc_path = settings.SELENIUM_SAUCE_CONNECT_PATH
+        if len(sc_path) < 2:
+            self.stdout.write('You need to configure SELENIUM_SAUCE_CONNECT_PATH')
+            return False, None
+        username = settings.SELENIUM_SAUCE_USERNAME
+        if not username:
+            self.stdout.write('You need to configure SELENIUM_SAUCE_USERNAME')
+            return False, None
+        key = settings.SELENIUM_SAUCE_API_KEY
+        if not key:
+            self.stdout.write('You need to configure SELENIUM_SAUCE_API_KEY')
+            return False, None
+        # Is it already running?
+        process = Popen(['ps -e | grep "%s"' % key],
+                        shell=True, stdout=PIPE)
+        (grep_output, _grep_error) = process.communicate()
+        grep_command = 'grep {}'.format(key)
+        lines = grep_output.split('\n')
+        for line in lines:
+            if 'sc' in line and username in line and grep_command not in line:
+                self.stdout.write('Sauce Connect is already running')
+                return True, None
+        self.stdout.write('Starting Sauce Connect')
+        output = OutputMonitor()
+        sc_process = Popen([sc_path, '-u', username, '-k', key],
+                           stdout=output.stream.input,
+                           stderr=open(os.devnull, 'w'))
+        ready_log_line = 'Connection established.'
+        if not output.wait_for(ready_log_line, 60):
+            self.stdout.write('Timeout starting Sauce Connect:\n')
+            self.stdout.write('\n'.join(output.lines))
+            return False, None
+        return True, sc_process
+
+    def verify_selenium_server_is_running(self):
+        """
+        Start the Selenium standalone server, if it isn't already running.
+        Returns a tuple of two elements:
+
+        * A boolean which is True if the server is now running
+        * The Popen object representing the process so it can be terminated
+          later; if the server was already running, this value is "None"
+        """
+        selenium_jar = settings.SELENIUM_JAR_PATH
+        if len(selenium_jar) < 5:
+            self.stdout.write('You need to configure SELENIUM_JAR_PATH')
+            return False, None
+        _jar_dir, jar_name = os.path.split(selenium_jar)
+        # Is it already running?
+        process = Popen(['ps -e | grep "%s"' % jar_name[:-4]],
+                        shell=True, stdout=PIPE)
+        (grep_output, _grep_error) = process.communicate()
+        lines = grep_output.split('\n')
+        for line in lines:
+            if jar_name in line:
+                self.stdout.write('Selenium standalone server is already running')
+                return True, None
+        self.stdout.write('Starting the Selenium standalone server')
+        output = OutputMonitor()
+        selenium_process = Popen(['java', '-jar', selenium_jar],
+                                 stdout=output.stream.input,
+                                 stderr=open(os.devnull, 'w'))
+        ready_log_line = 'Started org.openqa.jetty.jetty.Server'
+        if not output.wait_for(ready_log_line, 10):
+            self.stdout.write('Timeout starting the Selenium server:\n')
+            self.stdout.write('\n'.join(output.lines))
+            return False, None
+        return True, selenium_process
+
+    def verify_appium_is_running(self):
+        """Verify that Appium is running so it can be used for local iOS tests."""
+        process = Popen(['ps -e | grep "Appium"'], shell=True, stdout=PIPE)
+        (grep_output, _grep_error) = process.communicate()
+        lines = grep_output.split('\n')
+        for line in lines:
+            if 'Appium.app' in line:
+                self.stdout.write('Appium is already running')
+                return True
+        self.stdout.write('Please launch and configure Appium first')
+        return False
