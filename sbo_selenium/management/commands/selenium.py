@@ -127,9 +127,12 @@ class Command(BaseCommand):
         configuration that was specified on the command line.
         """
         env = os.environ
-        env['SELENIUM_BROWSER'] = options['browser_name']
         # https://docs.djangoproject.com/en/1.6/topics/testing/tools/#liveservertestcase
         env['DJANGO_LIVE_TEST_SERVER_ADDRESS'] = settings.DJANGO_LIVE_TEST_SERVER_ADDRESS
+        if 'SAUCE_API_KEY' in env:
+            # Jenkins plugin has already configured the environment for us
+            return
+        env['SELENIUM_BROWSER'] = options['browser_name']
         platform = options['platform']
         browser_version = options['browser_version']
         if not platform or not browser_version:

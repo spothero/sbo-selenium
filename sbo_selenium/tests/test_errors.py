@@ -1,4 +1,5 @@
 from django.core.urlresolvers import reverse
+from django.test.utils import override_settings
 
 from nose.tools import assert_raises_regexp
 from selenium.common.exceptions import TimeoutException
@@ -6,6 +7,7 @@ from selenium.common.exceptions import TimeoutException
 from sbo_selenium import SeleniumTestCase
 
 
+@override_settings(SELENIUM_TIMEOUT=1)
 class TestErrors(SeleniumTestCase):
     """
     Test cases for useful handling of error conditions.
