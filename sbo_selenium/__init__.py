@@ -1,1 +1,1 @@
-from testcase import SeleniumTestCase
+from testcase import SeleniumTestCase  # flake8: noqa

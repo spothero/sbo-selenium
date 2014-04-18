@@ -4,6 +4,7 @@ DEBUG = False
 JS_DEBUG = False
 ALLOWED_HOSTS = ['localhost']
 DJANGO_LIVE_TEST_SERVER_ADDRESS = 'localhost:9090'
+SELENIUM_SAUCE_VERSION = '2.41.0'
 SELENIUM_TIMEOUT = 10
 
 # This is a public repository!  Never commit real data for these!
@@ -33,7 +34,6 @@ DATABASES = {
 
 ROOT_PATH = os.path.abspath(os.path.dirname(__file__))
 LOG_DIR = os.path.join(ROOT_PATH, 'log')
-SELENIUM_LOG_FILE = os.path.join(LOG_DIR, 'tests.log')
 
 # Absolute path to the directory static files should be collected to.
 # Don't put anything in this directory yourself; store your static files
@@ -92,7 +92,7 @@ INSTALLED_APPS = (
 )
 
 try:
-    import sbo_sphinx
+    import sbo_sphinx  # flake8: noqa
     INSTALLED_APPS += ('sbo_sphinx',)
 except:
     pass
@@ -117,7 +117,7 @@ LOGGING = {
         # can omit errors in setup and teardown; log everything to file also
         'file': {
             'class': 'logging.FileHandler',
-            'filename': SELENIUM_LOG_FILE,
+            'filename': os.path.join(LOG_DIR, 'tests.log'),
             'formatter': 'simple',
             'level': 'DEBUG',
         },

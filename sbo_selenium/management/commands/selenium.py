@@ -9,6 +9,7 @@ from django.core.management.base import BaseCommand
 from django_nose.management.commands.test import Command as TestCommand
 
 from sbo_selenium.conf import settings
+from sbo_selenium.testcase import sauce_sessions
 from sbo_selenium.utils import OutputMonitor
 
 
@@ -44,18 +45,18 @@ class Command(BaseCommand):
             '--browser-version',
             dest='browser_version',
             help='Browser version for the Sauce OnDemand VM to use'
+        ),
+        make_option(
+            '--tunnel-identifier',
+            dest='tunnel_id',
+            help='Sauce Connect tunnel identifier'
         )
     )
     option_list = TestCommand.option_list + custom_options
 
     @staticmethod
     def clean():
-        """Clear out any old logs and screenshots"""
-        log_file = settings.SELENIUM_LOG_FILE
-        if log_file and os.path.isfile(log_file):
-            # Do not just delete it, that messes up any file loggers using it
-            with open(log_file, 'w') as f:
-                f.write('')
+        """Clear out any old screenshots"""
         screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
         if screenshot_dir and os.path.isdir(screenshot_dir):
             rmtree(screenshot_dir, ignore_errors=True)
@@ -83,7 +84,7 @@ class Command(BaseCommand):
         sc_process = None
         selenium_process = None
         if 'platform' in options and settings.SELENIUM_SAUCE_CONNECT_PATH:
-            running, sc_process = self.verify_sauce_connect_is_running()
+            running, sc_process = self.verify_sauce_connect_is_running(options)
             if not running:
                 return
         elif browser_name in ['opera', 'safari']:
@@ -102,7 +103,7 @@ class Command(BaseCommand):
         self.update_environment(options)
         self.run_tests(tests, browser_name, count)
 
-        # Kill the Selenium standalone server, if running
+        # Kill Sauce Connect, if running
         if sc_process:
             sc_process.kill()
 
@@ -117,6 +118,10 @@ class Command(BaseCommand):
             msg = 'Test run %d using %s' % (i + 1, browser_name)
             self.stdout.write(msg)
             call_command(*test_args)
+            for session in sauce_sessions:
+                self.stdout.write(session)
+            self.stdout.flush()
+            del sauce_sessions[:]
 
     @staticmethod
     def update_environment(options):
@@ -129,6 +134,9 @@ class Command(BaseCommand):
         env = os.environ
         # https://docs.djangoproject.com/en/1.6/topics/testing/tools/#liveservertestcase
         env['DJANGO_LIVE_TEST_SERVER_ADDRESS'] = settings.DJANGO_LIVE_TEST_SERVER_ADDRESS
+        tunnel_id = options['tunnel_id']
+        if tunnel_id:
+            env['SAUCE_TUNNEL_ID'] = tunnel_id
         if 'SAUCE_API_KEY' in env:
             # Jenkins plugin has already configured the environment for us
             return
@@ -154,7 +162,7 @@ class Command(BaseCommand):
             'SELENIUM_VERSION': browser_version,
         })
 
-    def verify_sauce_connect_is_running(self):
+    def verify_sauce_connect_is_running(self, options):
         """
         Start Sauce Connect, if it isn't already running.  Returns a tuple of
         two elements:
@@ -187,7 +195,11 @@ class Command(BaseCommand):
                 return True, None
         self.stdout.write('Starting Sauce Connect')
         output = OutputMonitor()
-        sc_process = Popen([sc_path, '-u', username, '-k', key],
+        command = [sc_path, '-u', username, '-k', key]
+        tunnel_id = options['tunnel_id']
+        if tunnel_id:
+            command.extend(['-i', tunnel_id])
+        sc_process = Popen(command,
                            stdout=output.stream.input,
                            stderr=open(os.devnull, 'w'))
         ready_log_line = 'Connection established.'

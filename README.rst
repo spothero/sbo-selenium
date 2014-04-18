@@ -64,10 +64,6 @@ runs:
   an empty list.
 * ``SELENIUM_JAR_PATH`` - Absolute path of the Selenium standalone server jar
   file.
-* ``SELENIUM_LOG_FILE`` - Absolute path of the file to log debug and error
-  messages to.  If not set, these messages will not appear anywhere (adding
-  them to stderr or stdout would clutter the test results to the point of
-  uselessness).
 * ``SELENIUM_POLL_FREQUENCY`` - The number of seconds to wait after a failed
   operation before trying again.  Default value is 0.5 seconds.
 * ``SELENIUM_SAUCE_API_KEY`` - The API key for the Sauce Labs account to use
@@ -79,6 +75,10 @@ runs:
   site being tested is publicly accessible.
 * ``SELENIUM_SAUCE_USERNAME`` - The username for the Sauce Labs account to use
   for running tests.
+* ``SELENIUM_SAUCE_VERSION`` - The version of Selenium to ask Sauce Labs to
+  use in the provided virtual machine.  If omitted, the current default version
+  provided by Sauce Labs is used.  Documentation on the available versions and
+  current default can be found `here <https://saucelabs.com/docs/additional-config#selenium-version>`_.
 * ``SELENIUM_SCREENSHOT_DIR`` - Absolute path of the directory in which to save
   screenshots taken over the course of running tests (these can be useful for
   debugging test failures).  The directory will be created if it doesn't
@@ -88,6 +88,11 @@ runs:
 * ``SELENIUM_TIMEOUT`` - The number of seconds to wait after an operation first
   failed until giving up and declaring it an error.  Default value is 10
   seconds.
+
+Note that some test runners (such as nose) may not always show errors logged
+during test setup and teardown.  To consistently get this output, you may want
+to configure a logging handler that outputs to file (in addition to any that
+may be outputting to console).
 
 Creating Tests
 --------------
@@ -176,13 +181,19 @@ addition to the ``-b`` browser name setting mentioned previously:
 The valid values for these can be found on the
 `Sauce Labs website <https://saucelabs.com/platforms>`_.
 
+There's also a ``--tunnel-identifier`` parameter which can be used to utilize
+a named Sauce Connect tunnel; this is particularly useful if you intend to run
+multiple Connect instances against the same account simultaneously (like on
+multiple Jenkins slave nodes).  For more about what these tunnels are and when
+to use them, see the `Sauce Labs documentation <https://saucelabs.com/docs/connect#part-9>`_
+on the topic.
+
 Generating Documentation
 ------------------------
 
-Documentation for this package is generated using
-`sbo-sphinx <https://github.com/safarijv/sbo-sphinx>`_.  To generate the docs
-locally with any changes you may have made::
+Documentation for this package is generated using `Sphinx <http://sphinx-doc.org/>`_
+and some extensions for it from `sbo-sphinx <https://github.com/safarijv/sbo-sphinx>`_.
+To generate the docs locally with any changes you may have made::
 
-    $ pip install -r requirements/development.txt
-    $ cd docs
-    $ DJANGO_SETTINGS_MODULE=test_settings sphinx-build -b html . _build
+    pip install -r requirements/tests.txt
+    tox -e docs

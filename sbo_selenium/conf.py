@@ -20,11 +20,6 @@ class LazySettings(object):
         return getattr(django_settings, 'SELENIUM_DEFAULT_TESTS', [])
 
     @property
-    def SELENIUM_LOG_FILE(self):
-        """Log file for Selenium test logging, errors, etc."""
-        return getattr(django_settings, 'SELENIUM_LOG_FILE', '')
-
-    @property
     def SELENIUM_POLL_FREQUENCY(self):
         """Default operation retry frequency"""
         return getattr(django_settings, 'SELENIUM_POLL_FREQUENCY', 0.5)
@@ -48,6 +43,12 @@ class LazySettings(object):
     def SELENIUM_SAUCE_USERNAME(self):
         """Username for the Sauce Labs account to use for running tests"""
         return getattr(django_settings, 'SELENIUM_SAUCE_USERNAME', '')
+
+    @property
+    def SELENIUM_SAUCE_VERSION(self):
+        """Version of Selenium to use in the Sauce Labs virtual machines.  If
+        omitted, uses the current default version used by Sauce Labs."""
+        return getattr(django_settings, 'SELENIUM_SAUCE_VERSION', '')
 
     @property
     def SELENIUM_SCREENSHOT_DIR(self):

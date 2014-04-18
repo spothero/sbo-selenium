@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import io
 import json
 import logging
 import os
@@ -11,6 +12,7 @@ import time
 from nose.tools import assert_raises
 from django.test import LiveServerTestCase
 from django.test.testcases import QuietWSGIRequestHandler, StoppableWSGIServer
+from django.utils import six
 import requests
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, \
@@ -24,6 +26,9 @@ from selenium.webdriver.support.wait import WebDriverWait
 from sbo_selenium.conf import settings
 
 logger = logging.getLogger('django.request')
+
+# Storage for Sauce Labs session IDs so they can be logged in bulk
+sauce_sessions = []
 
 ADD_ACCESSIBILITY_SCRIPT = """
 var script = document.createElement('script');
@@ -93,32 +98,35 @@ SELECT_TEXT_SOURCE = """
 """
 
 
+class LoggingStream(io.TextIOBase):
+    """
+    A stream that writes to the "django.request" logger (sending a new message
+    when each newline is encountered).
+    """
+    def __init__(self, *args, **kwargs):
+        self.buffer = six.StringIO()
+        super(LoggingStream, self).__init__(*args, **kwargs)
+
+    def write(self, s):
+        parts = re.split("([^\n]+)", s)
+        for part in parts:
+            if part == "\n":
+                logger.error(self.buffer.getvalue())
+                self.buffer = six.StringIO()
+            elif part:
+                self.buffer.write(part)
+
+
 def replacement_get_stderr(self):
     """ Replacement for QuietWSGIRequestHandler.get_stderr() to log errors to
     file rather than cluttering the test output """
-    log_file = settings.SELENIUM_LOG_FILE
-    if log_file:
-        return open(log_file, "a")
-    else:
-        return os.devnull
+    return LoggingStream()
 
 
-def replacement_log_exception(self, exc_info):
-    """Implementation of log_exception() for QuietWSGIRequestHandler which logs
-    errors instead of dumping them to stderr (where they get mixed up with the
-    test output).
-    """
-    logger.error('QuietWSGIRequestHandler exception:', exc_info=exc_info)
-
-
-def replacement_log_message(self, format_str, *args):
+def replacement_log_message(self, format, *args):
     """ Replacement for QuitWSGIRequestHandler.log_message() to log messages
     rather than ignore them """
-    # Don't bother logging requests for admin images or the favicon.
-    if (self.path.startswith(self.admin_static_prefix)
-            or self.path == '/favicon.ico'):
-        return
-    logger.info(format_str % args)
+    logger.info("[%s] %s", self.log_date_time_string(), format % args)
 
 
 def replacement_handle_error(self, request, client_address):
@@ -126,14 +134,13 @@ def replacement_handle_error(self, request, client_address):
     "[Errno 32] Broken pipe" (which happens when a browser cancels a request
     before it finishes because it realizes it already has the asset).  By
     default these get dumped to stderr where they get confused with the test
-    results, but aren't actually treated as test errors.  We'll just ignore
-    them for now.
+    results, but aren't actually treated as test errors.  We'll just log them
+    instead.
     """
-    pass
-
+    msg = "Exception happened during processing of request from %s"
+    logger.error(msg, client_address, exc_info=sys.exc_info())
 
 QuietWSGIRequestHandler.get_stderr = replacement_get_stderr
-QuietWSGIRequestHandler.log_exception = replacement_log_exception
 QuietWSGIRequestHandler.log_message = replacement_log_message
 StoppableWSGIServer.handle_error = replacement_handle_error
 
@@ -151,7 +158,7 @@ class Wait(WebDriverWait):
         """Calls the method provided with the driver as an argument until the \
         return value is not False."""
         end_time = time.time() + self._timeout
-        while(True):
+        while True:
             try:
                 value = method(self._driver)
                 if value:
@@ -163,7 +170,7 @@ class Wait(WebDriverWait):
             except WebDriverException:
                 pass
             time.sleep(self._poll)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 break
         raise TimeoutException(message)
 
@@ -171,7 +178,7 @@ class Wait(WebDriverWait):
         """Calls the method provided with the driver as an argument until the
         return value is False."""
         end_time = time.time() + self._timeout
-        while(True):
+        while True:
             try:
                 value = method(self._driver)
                 if not value:
@@ -183,7 +190,7 @@ class Wait(WebDriverWait):
             except WebDriverException:
                 pass
             time.sleep(self._poll)
-            if(time.time() > end_time):
+            if time.time() > end_time:
                 break
         raise TimeoutException(message)
 
@@ -211,7 +218,7 @@ class SeleniumTestCase(LiveServerTestCase):
             address = '127.0.0.1'
         port = 4723
         cls._appium_executor = "".join(["http://", address, ":", str(port),
-                                     '/wd/hub'])
+                                       '/wd/hub'])
         return cls._appium_executor
 
     @classmethod
@@ -578,6 +585,7 @@ class SeleniumTestCase(LiveServerTestCase):
         version = os.getenv("SELENIUM_VERSION", "")
         self.sauce_user_name = os.getenv("SAUCE_USER_NAME")
         self.sauce_api_key = os.getenv("SAUCE_API_KEY")
+        tunnel_id = os.getenv("SAUCE_TUNNEL_ID", "")
         build_number = os.getenv('BUILD_NUMBER')
         job_name = os.getenv('JOB_NAME')
         # http://code.google.com/p/selenium/wiki/DesiredCapabilities
@@ -594,11 +602,15 @@ class SeleniumTestCase(LiveServerTestCase):
         }
         if build_number and job_name:
             caps['build'] = '{} #{}'.format(job_name, build_number)
+        if tunnel_id:
+            caps['tunnel-identifier'] = tunnel_id
+        if settings.SELENIUM_SAUCE_VERSION:
+            caps['selenium-version'] = settings.SELENIUM_SAUCE_VERSION
         remote = webdriver.Remote(command_executor=executor,
                                   desired_capabilities=caps)
-        # Output the Sauce session ID on stdout for Jenkins integration
+        # Store the Sauce session ID to output later for Jenkins integration
         # See https://saucelabs.com/jenkins/5 for details
-        print 'SauceOnDemandSessionID={} job-name={}'.format(remote.session_id, self.id())
+        sauce_sessions.append('SauceOnDemandSessionID={} job-name={}'.format(remote.session_id, self.id()))
         return remote
 
     def report_status(self, passed):

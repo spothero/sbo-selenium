@@ -9,6 +9,7 @@ Contents:
    :maxdepth: 2
 
    readme
+   CHANGELOG
    Python API <python/modules>
 
 
