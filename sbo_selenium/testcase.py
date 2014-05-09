@@ -255,6 +255,8 @@ class SeleniumTestCase(LiveServerTestCase):
                                        desired_capabilities=capabilities)
         elif self.browser == 'opera':
             self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
+        elif self.browser == 'iexplore':
+            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
         elif self.browser == 'phantomjs':
             self.sel = PhantomJS(service_args=['--debug=true',
                                                '--webdriver-loglevel=DEBUG'])
