@@ -12,7 +12,7 @@ virtualenv==1.11.4
 # Exact versions of the base dependencies
 
 pip==1.5.4
-Django==1.6.2
+Django==1.6.5
 django-nose==1.2
 requests==2.2.1
 selenium==2.41.0
