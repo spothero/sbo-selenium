@@ -265,6 +265,7 @@ class SeleniumTestCase(LiveServerTestCase):
             self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
         else:
             self.sel = Chrome()
+        self.sel.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
         # Give the browser a little time; Firefox throws random errors if you
         # hit it too soon
         time.sleep(1)

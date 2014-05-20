@@ -1,6 +1,11 @@
 sbo-selenium Changelog
 ======================
 
+0.4.2 (2014-05-20)
+------------------
+* Page load timeout support (default is 10 seconds, override via SELENIUM_PAGE_LOAD_TIMEOUT)
+* Support for Internet Explorer Sauce OnDemand sessions
+
 0.4.1 (2014-04-18)
 ------------------
 * Added support for Sauce Connect tunnel identifiers

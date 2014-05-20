@@ -60,5 +60,10 @@ class LazySettings(object):
         """Default operation timeout in seconds"""
         return getattr(django_settings, 'SELENIUM_TIMEOUT', 10)
 
+    @property
+    def SELENIUM_PAGE_LOAD_TIMEOUT(self):
+        """Connection timeout for page load GET requests in seconds"""
+        return getattr(django_settings, 'SELENIUM_PAGE_LOAD_TIMEOUT', 10)
+
 
 settings = LazySettings()

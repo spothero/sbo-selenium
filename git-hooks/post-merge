@@ -40,5 +40,5 @@ if virtual_env:
     requirements_files.add('setup.py')
     if changed_files.intersection(requirements_files):
         os.system("pip install pip==1.5.4")  # match requirements/tests.txt
-        os.system("pip install --upgrade --editable ./")
         os.system("pip install --requirement requirements/tests.txt")
+        os.system("pip install --editable ./")

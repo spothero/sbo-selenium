@@ -62,6 +62,11 @@ runs:
   none are specified.  Should be an array of nose-compatible test
   specifications (see `Running Tests`_ below for examples).  Default value is
   an empty list.
+* ``SELENIUM_PAGE_LOAD_TIMEOUT`` - The number of seconds to wait for a response
+  to a GET request before considering it to have failed.  Default value is 10
+  seconds.  (This is particularly important when using Sauce Connect, as it
+  sometimes fails to connect properly, such that every single page load stalls
+  indefinitely.)
 * ``SELENIUM_JAR_PATH`` - Absolute path of the Selenium standalone server jar
   file.
 * ``SELENIUM_POLL_FREQUENCY`` - The number of seconds to wait after a failed
