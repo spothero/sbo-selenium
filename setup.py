@@ -13,7 +13,7 @@ requirements = parse_requirements(requirements_path, finder)
 install_requires = [str(r.req) for r in requirements]
 
 
-version = '0.4.2'
+version = '0.4.3'  # Remember to update docs/CHANGELOG.rst when this changes
 
 setup(
     name="sbo-selenium",

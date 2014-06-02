@@ -1,6 +1,10 @@
 sbo-selenium Changelog
 ======================
 
+0.4.3 (2014-06-01)
+------------------
+* More robust SeleniumTestCase.click() implementation (retry until success or timeout)
+
 0.4.2 (2014-05-20)
 ------------------
 * Page load timeout support (default is 10 seconds, override via SELENIUM_PAGE_LOAD_TIMEOUT)

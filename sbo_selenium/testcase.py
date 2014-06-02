@@ -145,6 +145,14 @@ QuietWSGIRequestHandler.log_message = replacement_log_message
 StoppableWSGIServer.handle_error = replacement_handle_error
 
 
+def lambda_click(element):
+    """Click function for use in Wait lambdas to verify that the click succeeded"""
+    if not element.is_displayed():
+        return False
+    element.click()
+    return True
+
+
 class Wait(WebDriverWait):
     """ Subclass of WebDriverWait with predetermined timeout and poll
     frequency.  Also deals with a wider variety of exceptions. """
@@ -331,12 +339,12 @@ class SeleniumTestCase(LiveServerTestCase):
             raise self.failureException(report)
 
     def click(self, selector):
-        """ Wait until the element matching the selector is visible """
+        """ Click the element matching the selector (and retry if it isn't
+        visible or clickable yet) """
         element = self.wait_for_element(selector)
-        element_is_visible = lambda driver: element.is_displayed()
-        msg = "The element matching '%s' should be visible" % selector
-        Wait(self.sel).until(element_is_visible, msg)
-        element.click()
+        element_was_clicked = lambda driver: lambda_click(element)
+        msg = "The element matching '%s' should be clickable" % selector
+        Wait(self.sel).until(element_was_clicked, msg)
         return element
 
     def click_link_with_text(self, text):
