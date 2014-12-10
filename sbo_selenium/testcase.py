@@ -252,7 +252,7 @@ class SeleniumTestCase(LiveServerTestCase):
         if os.getenv('SELENIUM_HOST'):
             self.sel = self.sauce_labs_driver()
         elif self.browser == 'firefox':
-            firefox_profile = Firefox(self.get_firefox_profile())
+            self.sel = Firefox(self.get_firefox_profile())
         elif self.browser == 'htmlunit':
             self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
         elif self.browser in ['ios', 'ipad', 'ipod', 'iphone']:
