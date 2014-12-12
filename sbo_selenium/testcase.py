@@ -208,39 +208,41 @@ class BrowserSetupMixin(object):
         return None
 
     def setup_browser(self):
-        self.browser = os.getenv('SELENIUM_BROWSER',
+        browser = os.getenv('SELENIUM_BROWSER',
                                  settings.SELENIUM_DEFAULT_BROWSER)
         if os.getenv('SELENIUM_HOST'):
-            self.sel = self.sauce_labs_driver()
-        elif self.browser == 'firefox':
-            self.sel = Firefox(self.get_firefox_profile())
-        elif self.browser == 'htmlunit':
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
-        elif self.browser in ['ios', 'ipad', 'ipod', 'iphone']:
+            web_driver = self.sauce_labs_driver()
+        elif browser == 'firefox':
+            web_driver = Firefox(self.get_firefox_profile())
+        elif browser == 'htmlunit':
+            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
+        elif browser in ['ios', 'ipad', 'ipod', 'iphone']:
             capabilities = {
                 'app': 'safari',
                 'browserName': '',
                 'device': 'iPhone Simulator',
                 'os': 'iOS 6.1'
             }
-            self.sel = RemoteWebDriver(command_executor=self.appium_command_executor(),
+            web_driver = RemoteWebDriver(command_executor=self.appium_command_executor(),
                                        desired_capabilities=capabilities)
-        elif self.browser == 'opera':
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
-        elif self.browser == 'iexplore':
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
-        elif self.browser == 'phantomjs':
-            self.sel = PhantomJS(service_args=['--debug=true',
+        elif browser == 'opera':
+            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
+        elif browser == 'iexplore':
+            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
+        elif browser == 'phantomjs':
+            web_driver = PhantomJS(service_args=['--debug=true',
                                                '--webdriver-loglevel=DEBUG'])
-        elif self.browser == 'safari':
+        elif browser == 'safari':
             # requires a Safari extension to be built from source and installed
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
+            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
         else:
-            self.sel = Chrome()
-        self.sel.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
+            web_driver = Chrome()
+        web_driver.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
         # Give the browser a little time; Firefox throws random errors if you
         # hit it too soon
         time.sleep(1)
+
+        return browser, web_driver
 
 
 class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
@@ -288,7 +290,7 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
     def setUp(self):
         """ Start a new browser instance for each test """
         self._screenshot_number = 1
-        self.setup_browser()
+        self.browser, self.sel = self.setup_browser()
 
     def tearDown(self):
         # Check to see if an exception was raised during the test
