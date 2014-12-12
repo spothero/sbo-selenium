@@ -203,50 +203,8 @@ class Wait(WebDriverWait):
         raise TimeoutException(message)
 
 
-class SeleniumTestCase(LiveServerTestCase):
-    """
-    Base class for Selenium tests.  Allows tests to be written independently
-    of which browser they're going to be run in.
-    """
-
-    def get_firefox_profile(self):
-        return None
-
-    @classmethod
-    def appium_command_executor(cls):
-        """ Get the command executor URL for iOS simulator testing """
-        if hasattr(cls, '_appium_executor'):
-            return cls._appium_executor
-        # Get the address iWebDriver will connect to
-        address = None
-        try:
-            address = socket.gethostbyname(socket.gethostname())
-        except:
-            # Use default address defined below
-            pass
-        # If we don't have an address we should use localhost
-        if not address:
-            address = '127.0.0.1'
-        port = 4723
-        cls._appium_executor = "".join(["http://", address, ":", str(port),
-                                       '/wd/hub'])
-        return cls._appium_executor
-
-    @classmethod
-    def setUpClass(cls):
-        # Create the screenshots directory if it doesn't exist yet
-        screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
-        if screenshot_dir and not os.path.exists(screenshot_dir):
-            os.makedirs(screenshot_dir)
-        super(SeleniumTestCase, cls).setUpClass()
-
-    @classmethod
-    def tearDownClass(cls):
-        super(SeleniumTestCase, cls).tearDownClass()
-
-    def setUp(self):
-        """ Start a new browser instance for each test """
-        self._screenshot_number = 1
+class BrowserSetupMixin(object):
+    def setup_browser(self):
         self.browser = os.getenv('SELENIUM_BROWSER',
                                  settings.SELENIUM_DEFAULT_BROWSER)
         if os.getenv('SELENIUM_HOST'):
@@ -281,6 +239,57 @@ class SeleniumTestCase(LiveServerTestCase):
         # hit it too soon
         time.sleep(1)
 
+
+class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
+    """
+    Base class for Selenium tests.  Allows tests to be written independently
+    of which browser they're going to be run in.
+    """
+
+    def get_firefox_profile(self):
+        return None
+
+    @classmethod
+    def appium_command_executor(cls):
+        """ Get the command executor URL for iOS simulator testing """
+        if hasattr(cls, '_appium_executor'):
+            return cls._appium_executor
+        # Get the address iWebDriver will connect to
+        address = None
+        try:
+            address = socket.gethostbyname(socket.gethostname())
+        except:
+            # Use default address defined below
+            pass
+        # If we don't have an address we should use localhost
+        if not address:
+            address = '127.0.0.1'
+        port = 4723
+        cls._appium_executor = "".join(["http://", address, ":", str(port),
+                                       '/wd/hub'])
+        return cls._appium_executor
+
+    @classmethod
+    def setup_screenshot_dir(cls):
+        # Create the screenshots directory if it doesn't exist yet
+        screenshot_dir = settings.SELENIUM_SCREENSHOT_DIR
+        if screenshot_dir and not os.path.exists(screenshot_dir):
+            os.makedirs(screenshot_dir)
+
+    @classmethod
+    def setUpClass(cls):
+        cls.setup_screenshot_dir()
+        super(SeleniumTestCaseBase, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super(SeleniumTestCaseBase, cls).tearDownClass()
+
+    def setUp(self):
+        """ Start a new browser instance for each test """
+        self._screenshot_number = 1
+        self.setup_browser()
+
     def tearDown(self):
         # Check to see if an exception was raised during the test
         info = sys.exc_info()
@@ -291,9 +300,14 @@ class SeleniumTestCase(LiveServerTestCase):
         self.report_status(passed)
         if hasattr(self, 'sel'):
             self.sel.quit()
-        super(SeleniumTestCase, self).tearDown()
+        super(SeleniumTestCaseBase, self).tearDown()
 
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~ Selenium operations ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+class SeleniumOperationsMixin(object):
+    """
+    Selenium Operations Mixin that contains all our selenium helpers.
+
+    """
 
     def assert_hidden(self, selector):
         element = self.wait_for_element(selector)
@@ -588,8 +602,8 @@ class SeleniumTestCase(LiveServerTestCase):
         Wait(self.sel).until(element_is_visible, msg)
         return element
 
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~ Sauce Labs support ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+class SauceLabsSupportMixin(object):
     def sauce_labs_driver(self):
         """ Configure the Selenium driver to use Sauce Labs """
         host = os.getenv("SELENIUM_HOST", "ondemand.saucelabs.com")
@@ -644,3 +658,12 @@ class SeleniumTestCase(LiveServerTestCase):
         }
         response = requests.put(url, body_content, headers=headers)
         return response.status_code == 200
+
+
+class SeleniumTestCase(SeleniumOperationsMixin, SauceLabsSupportMixin, SeleniumTestCaseBase):
+    """
+    Base class for Selenium tests.  Allows tests to be written independently
+    of which browser they're going to be run in.
+    """
+
+
