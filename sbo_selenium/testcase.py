@@ -204,6 +204,9 @@ class Wait(WebDriverWait):
 
 
 class BrowserSetupMixin(object):
+    def get_firefox_profile(self):
+        return None
+
     def setup_browser(self):
         self.browser = os.getenv('SELENIUM_BROWSER',
                                  settings.SELENIUM_DEFAULT_BROWSER)
@@ -245,9 +248,6 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
     Base class for Selenium tests.  Allows tests to be written independently
     of which browser they're going to be run in.
     """
-
-    def get_firefox_profile(self):
-        return None
 
     @classmethod
     def appium_command_executor(cls):
@@ -665,5 +665,6 @@ class SeleniumTestCase(SeleniumOperationsMixin, SauceLabsSupportMixin, SeleniumT
     Base class for Selenium tests.  Allows tests to be written independently
     of which browser they're going to be run in.
     """
+    pass
 
 
