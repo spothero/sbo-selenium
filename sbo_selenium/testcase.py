@@ -209,6 +209,9 @@ class SeleniumTestCase(LiveServerTestCase):
     of which browser they're going to be run in.
     """
 
+    def get_firefox_profile(self):
+        return None
+
     @classmethod
     def appium_command_executor(cls):
         """ Get the command executor URL for iOS simulator testing """
@@ -249,7 +252,7 @@ class SeleniumTestCase(LiveServerTestCase):
         if os.getenv('SELENIUM_HOST'):
             self.sel = self.sauce_labs_driver()
         elif self.browser == 'firefox':
-            self.sel = Firefox()
+            self.sel = Firefox(self.get_firefox_profile())
         elif self.browser == 'htmlunit':
             self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
         elif self.browser in ['ios', 'ipad', 'ipod', 'iphone']:
