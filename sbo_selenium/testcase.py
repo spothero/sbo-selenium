@@ -11,7 +11,13 @@ import time
 
 from nose.tools import assert_raises
 from django.test import LiveServerTestCase
-from django.test.testcases import QuietWSGIRequestHandler, StoppableWSGIServer
+from django.test.testcases import QuietWSGIRequestHandler
+
+try:
+    from django.test.testcases import StoppableWSGIServer
+except ImportError:
+    from django.test.testcases import WSGIServer as StoppableWSGIServer
+
 from django.utils import six
 import requests
 from selenium import webdriver
