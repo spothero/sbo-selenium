@@ -1,6 +1,11 @@
 sbo-selenium Changelog
 ======================
 
+0.4.4 (2015-01-30)
+------------------
+* Add a hook to allow sub classes to specify a firefox profile (from emperorcezar)
+* Fixed compatibility with pip 6.x
+
 0.4.3 (2014-06-01)
 ------------------
 * More robust SeleniumTestCase.click() implementation (retry until success or timeout)
@@ -8,7 +13,7 @@ sbo-selenium Changelog
 0.4.2 (2014-05-20)
 ------------------
 * Page load timeout support (default is 10 seconds, override via SELENIUM_PAGE_LOAD_TIMEOUT)
-* Support for Internet Explorer Sauce OnDemand sessions
+* Support for Internet Explorer Sauce OnDemand sessions (from qpfiffer)
 
 0.4.1 (2014-04-18)
 ------------------
