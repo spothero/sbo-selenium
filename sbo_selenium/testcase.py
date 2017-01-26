@@ -338,11 +338,14 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
 
         def cleanup_browser(d):
             pid = d.service.process.pid
-            children = psutil.Process(pid).children(recursive=True)
+            process = psutil.Process(pid)
+            children = process.children(recursive=True)
             d.quit()
-            gone, still_alive = psutil.wait_procs(children, timeout=3)
+            gone, still_alive = psutil.wait_procs([process] + children, timeout=3)
+            print("Browser Cleanup: Terminating ... {}".format(still_alive))
             map(lambda p: p.terminate(), still_alive)
             gone, still_alive = psutil.wait_procs(children, timeout=3)
+            print("Browser Cleanup: Killing ... {}".format(still_alive))
             map(lambda p: p.kill(), still_alive)
 
         self.addCleanup(cleanup_browser, self.sel)
