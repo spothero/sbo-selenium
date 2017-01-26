@@ -257,6 +257,12 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
     of which browser they're going to be run in.
     """
 
+    def get_firefox_profile(self):
+        return None
+
+    def get_chrome_driver(self):
+        return Chrome()
+
     @classmethod
     def appium_command_executor(cls):
         """ Get the command executor URL for iOS simulator testing """
@@ -296,7 +302,47 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
     def setUp(self):
         """ Start a new browser instance for each test """
         self._screenshot_number = 1
-        self.browser, self.sel = self.setup_browser()
+        self.browser = os.getenv('SELENIUM_BROWSER',
+                                 settings.SELENIUM_DEFAULT_BROWSER)
+        if os.getenv('SELENIUM_HOST'):
+            self.sel = self.sauce_labs_driver()
+        elif self.browser == 'firefox':
+            self.sel = Firefox(self.get_firefox_profile())
+        elif self.browser == 'htmlunit':
+            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
+        elif self.browser in ['ios', 'ipad', 'ipod', 'iphone']:
+            capabilities = {
+                'app': 'safari',
+                'browserName': '',
+                'device': 'iPhone Simulator',
+                'os': 'iOS 6.1'
+            }
+            self.sel = RemoteWebDriver(command_executor=self.appium_command_executor(),
+                                       desired_capabilities=capabilities)
+        elif self.browser == 'opera':
+            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
+        elif self.browser == 'iexplore':
+            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
+        elif self.browser == 'phantomjs':
+            self.sel = PhantomJS(service_args=['--debug=true',
+                                               '--webdriver-loglevel=DEBUG'])
+        elif self.browser == 'safari':
+            # requires a Safari extension to be built from source and installed
+            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
+        else:
+            self.sel = self.get_chrome_driver()
+        self.sel.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
+        # Give the browser a little time; Firefox throws random errors if you
+        # hit it too soon
+        time.sleep(1)
+
+        def cleanup_browser():
+            try:
+                self.sel.quit()
+            except:
+                pass
+
+        self.addCleanup(cleanup_browser)
 
     def tearDown(self):
         # Check to see if an exception was raised during the test
@@ -306,8 +352,6 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
             # Want to see what went wrong
             self.screenshot()
         self.report_status(passed)
-        if hasattr(self, 'sel'):
-            self.sel.quit()
         super(SeleniumTestCaseBase, self).tearDown()
 
 
