@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import psutil
 import re
 import socket
 import sys
@@ -334,17 +335,17 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
         self.sel.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
         # Give the browser a little time; Firefox throws random errors if you
         # hit it too soon
-        time.sleep(1)
 
-        def cleanup_browser():
-            try:
-                self.sel.quit()
-                # Give the browser time to shut down
-                time.sleep(1)
-            except:
-                pass
+        def cleanup_browser(d):
+            pid = d.service.process.pid
+            children = psutil.Process(pid).children(recursive=True)
+            d.quit()
+            gone, still_alive = psutil.wait_procs(children, timeout=3)
+            map(lambda p: p.terminate(), still_alive)
+            gone, still_alive = psutil.wait_procs(children, timeout=3)
+            map(lambda p: p.kill(), still_alive)
 
-        self.addCleanup(cleanup_browser)
+        self.addCleanup(cleanup_browser, self.sel)
 
     def tearDown(self):
         # Check to see if an exception was raised during the test

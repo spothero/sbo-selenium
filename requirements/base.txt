@@ -17,3 +17,6 @@ requests
 
 # Python's Selenium driver (for browser automation)
 selenium
+
+# Psutil for killing of browser executables
+psutil
