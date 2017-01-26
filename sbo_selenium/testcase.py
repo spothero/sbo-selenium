@@ -339,6 +339,8 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
         def cleanup_browser():
             try:
                 self.sel.quit()
+                # Give the browser time to shut down
+                time.sleep(1)
             except:
                 pass
 
