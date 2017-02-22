@@ -65,5 +65,10 @@ class LazySettings(object):
         """Connection timeout for page load GET requests in seconds"""
         return getattr(django_settings, 'SELENIUM_PAGE_LOAD_TIMEOUT', 10)
 
+    @property
+    def SELENIUM_GRID_HUB(self):
+        """http address for the hub"""
+        return getattr(django_settings, 'SELENIUM_GRID_HUB', '')
+
 
 settings = LazySettings()

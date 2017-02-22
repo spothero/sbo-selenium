@@ -210,79 +210,21 @@ class Wait(WebDriverWait):
         raise TimeoutException(message)
 
 
-class BrowserSetupMixin(object):
-    def get_firefox_profile(self):
-        return None
-
-    def setup_browser(self):
-        browser = os.getenv('SELENIUM_BROWSER',
-                                 settings.SELENIUM_DEFAULT_BROWSER)
-        if os.getenv('SELENIUM_HOST'):
-            web_driver = self.sauce_labs_driver()
-        elif browser == 'firefox':
-            web_driver = Firefox(self.get_firefox_profile())
-        elif browser == 'htmlunit':
-            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
-        elif browser in ['ios', 'ipad', 'ipod', 'iphone']:
-            capabilities = {
-                'app': 'safari',
-                'browserName': '',
-                'device': 'iPhone Simulator',
-                'os': 'iOS 6.1'
-            }
-            web_driver = RemoteWebDriver(command_executor=self.appium_command_executor(),
-                                       desired_capabilities=capabilities)
-        elif browser == 'opera':
-            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
-        elif browser == 'iexplore':
-            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
-        elif browser == 'phantomjs':
-            web_driver = PhantomJS(service_args=['--debug=true',
-                                               '--webdriver-loglevel=DEBUG'])
-        elif browser == 'safari':
-            # requires a Safari extension to be built from source and installed
-            web_driver = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
-        else:
-            web_driver = Chrome()
-        web_driver.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
-        # Give the browser a little time; Firefox throws random errors if you
-        # hit it too soon
-        time.sleep(1)
-
-        return browser, web_driver
-
-
-class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
+class SeleniumTestCaseBase(LiveServerTestCase):
     """
     Base class for Selenium tests.  Allows tests to be written independently
     of which browser they're going to be run in.
     """
 
+    user_agent = ''
+    webdriver_capabilities = {}
+    mobile_emulation = None
+
     def get_firefox_profile(self):
-        return None
+        return webdriver.FirefoxProfile()
 
     def get_chrome_driver(self):
         return Chrome()
-
-    @classmethod
-    def appium_command_executor(cls):
-        """ Get the command executor URL for iOS simulator testing """
-        if hasattr(cls, '_appium_executor'):
-            return cls._appium_executor
-        # Get the address iWebDriver will connect to
-        address = None
-        try:
-            address = socket.gethostbyname(socket.gethostname())
-        except:
-            # Use default address defined below
-            pass
-        # If we don't have an address we should use localhost
-        if not address:
-            address = '127.0.0.1'
-        port = 4723
-        cls._appium_executor = "".join(["http://", address, ":", str(port),
-                                       '/wd/hub'])
-        return cls._appium_executor
 
     @classmethod
     def setup_screenshot_dir(cls):
@@ -300,55 +242,48 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
     def tearDownClass(cls):
         super(SeleniumTestCaseBase, cls).tearDownClass()
 
+    def set_up_browser(self):
+        browser = os.getenv('SELENIUM_BROWSER',
+                                 settings.SELENIUM_DEFAULT_BROWSER)
+        host = os.getenv('SELENIUM_GRID_HUB',
+                                 settings.SELENIUM_GRID_HUB)
+        if host:
+            capabilities = {}
+
+            if browser == 'chrome':
+                chrome_options = webdriver.ChromeOptions()
+                if self.mobile_emulation:
+                    mobile_emulation = {"deviceName": self.mobile_emulation}
+                    chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
+                    capabilities = chrome_options.to_capabilities()
+
+            sel = RemoteWebDriver(command_executor=host, desired_capabilities=capabilities)
+        elif browser == 'firefox':
+            sel = Firefox(self.get_firefox_profile())
+        elif browser == 'htmlunit':
+            sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
+        elif browser == 'opera':
+            sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
+        elif browser == 'iexplore':
+            sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
+        elif browser == 'phantomjs':
+            sel = PhantomJS(service_args=['--debug=true', '--webdriver-loglevel=DEBUG'])
+        elif browser == 'safari':
+            # requires a Safari extension to be built from source and installed
+            sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
+        else:
+            sel = self.get_chrome_driver()
+
+        sel.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
+        time.sleep(1)
+        return sel
+
+
     def setUp(self):
         """ Start a new browser instance for each test """
         self._screenshot_number = 1
-        self.browser = os.getenv('SELENIUM_BROWSER',
-                                 settings.SELENIUM_DEFAULT_BROWSER)
-        if os.getenv('SELENIUM_HOST'):
-            self.sel = self.sauce_labs_driver()
-        elif self.browser == 'firefox':
-            self.sel = Firefox(self.get_firefox_profile())
-        elif self.browser == 'htmlunit':
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.HTMLUNITWITHJS)
-        elif self.browser in ['ios', 'ipad', 'ipod', 'iphone']:
-            capabilities = {
-                'app': 'safari',
-                'browserName': '',
-                'device': 'iPhone Simulator',
-                'os': 'iOS 6.1'
-            }
-            self.sel = RemoteWebDriver(command_executor=self.appium_command_executor(),
-                                       desired_capabilities=capabilities)
-        elif self.browser == 'opera':
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.OPERA)
-        elif self.browser == 'iexplore':
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.INTERNETEXPLORER)
-        elif self.browser == 'phantomjs':
-            self.sel = PhantomJS(service_args=['--debug=true',
-                                               '--webdriver-loglevel=DEBUG'])
-        elif self.browser == 'safari':
-            # requires a Safari extension to be built from source and installed
-            self.sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
-        else:
-            self.sel = self.get_chrome_driver()
-        self.sel.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
-        # Give the browser a little time; Firefox throws random errors if you
-        # hit it too soon
+        self.sel = self.set_up_browser()
 
-        def cleanup_browser(d):
-            pid = d.service.process.pid
-            process = psutil.Process(pid)
-            children = process.children(recursive=True)
-            d.quit()
-            gone, still_alive = psutil.wait_procs([process] + children, timeout=3)
-            print("Browser Cleanup: Terminating ... {}".format(still_alive))
-            map(lambda p: p.terminate(), still_alive)
-            gone, still_alive = psutil.wait_procs(children, timeout=3)
-            print("Browser Cleanup: Killing ... {}".format(still_alive))
-            map(lambda p: p.kill(), still_alive)
-
-        self.addCleanup(cleanup_browser, self.sel)
 
     def tearDown(self):
         # Check to see if an exception was raised during the test
@@ -357,8 +292,8 @@ class SeleniumTestCaseBase(BrowserSetupMixin, LiveServerTestCase):
         if not passed:
             # Want to see what went wrong
             self.screenshot()
-        self.report_status(passed)
         super(SeleniumTestCaseBase, self).tearDown()
+        self.sel.quit()
 
 
 class SeleniumOperationsMixin(object):
@@ -661,64 +596,7 @@ class SeleniumOperationsMixin(object):
         return element
 
 
-class SauceLabsSupportMixin(object):
-    def sauce_labs_driver(self):
-        """ Configure the Selenium driver to use Sauce Labs """
-        host = os.getenv("SELENIUM_HOST", "ondemand.saucelabs.com")
-        port = os.getenv("SELENIUM_PORT", "80")
-        executor = "".join(["http://", host, ":", port, '/wd/hub'])
-        platform = os.getenv("SELENIUM_PLATFORM", "Windows 7")
-        version = os.getenv("SELENIUM_VERSION", "")
-        self.sauce_user_name = os.getenv("SAUCE_USER_NAME")
-        self.sauce_api_key = os.getenv("SAUCE_API_KEY")
-        tunnel_id = os.getenv("SAUCE_TUNNEL_ID", "")
-        build_number = os.getenv('BUILD_NUMBER')
-        job_name = os.getenv('JOB_NAME')
-        # http://code.google.com/p/selenium/wiki/DesiredCapabilities
-        # https://saucelabs.com/docs/additional-config#desired-capabilities
-        caps = {
-            'accessKey': self.sauce_api_key,
-            'capture-html': True,
-            'browserName': self.browser,
-            'javascriptEnabled': True,
-            'name': self.id(),
-            'platform': platform,
-            'username': self.sauce_user_name,
-            'version': version,
-        }
-        if build_number and job_name:
-            caps['build'] = '{} #{}'.format(job_name, build_number)
-        if tunnel_id:
-            caps['tunnel-identifier'] = tunnel_id
-        if settings.SELENIUM_SAUCE_VERSION:
-            caps['selenium-version'] = settings.SELENIUM_SAUCE_VERSION
-        remote = webdriver.Remote(command_executor=executor,
-                                  desired_capabilities=caps)
-        # Store the Sauce session ID to output later for Jenkins integration
-        # See https://saucelabs.com/jenkins/5 for details
-        sauce_sessions.append('SauceOnDemandSessionID={} job-name={}'.format(remote.session_id, self.id()))
-        return remote
-
-    def report_status(self, passed):
-        """Report to Sauce Labs whether or not the test passed, so that can be
-        reflected in their UI."""
-        if not hasattr(self, 'sauce_user_name'):
-            # Not using Sauce Labs for this test
-            return
-        url_pattern = 'http://{}:{}@saucelabs.com/rest/v1/{}/jobs/{}'
-        url = url_pattern.format(self.sauce_user_name,
-                                 self.sauce_api_key,
-                                 self.sauce_user_name,
-                                 self.sel.session_id)
-        body_content = json.dumps({"passed": passed})
-        headers = {
-            'Content-Type': 'application/json',
-        }
-        response = requests.put(url, body_content, headers=headers)
-        return response.status_code == 200
-
-
-class SeleniumTestCase(SeleniumOperationsMixin, SauceLabsSupportMixin, SeleniumTestCaseBase):
+class SeleniumTestCase(SeleniumOperationsMixin, SeleniumTestCaseBase):
     """
     Base class for Selenium tests.  Allows tests to be written independently
     of which browser they're going to be run in.
