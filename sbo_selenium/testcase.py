@@ -255,7 +255,7 @@ class SeleniumTestCaseBase(LiveServerTestCase):
                 if self.mobile_emulation:
                     mobile_emulation = {"deviceName": self.mobile_emulation}
                     chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
-                    capabilities = chrome_options.to_capabilities()
+                capabilities = chrome_options.to_capabilities()
 
             sel = RemoteWebDriver(command_executor=host, desired_capabilities=capabilities)
         elif browser == 'firefox':
