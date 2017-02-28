@@ -257,7 +257,16 @@ class SeleniumTestCaseBase(LiveServerTestCase):
                     chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
                 capabilities = chrome_options.to_capabilities()
 
-            sel = RemoteWebDriver(command_executor=host, desired_capabilities=capabilities)
+            socket.setdefaulttimeout(30)
+
+            def get_sel():
+                try:
+                    return RemoteWebDriver(command_executor=host, desired_capabilities=capabilities)
+                except socket.timeout:
+                    return get_sel()
+
+            sel = get_sel()
+
         elif browser == 'firefox':
             sel = Firefox(self.get_firefox_profile())
         elif browser == 'htmlunit':
