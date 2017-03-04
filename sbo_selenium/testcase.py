@@ -223,8 +223,9 @@ class SeleniumTestCaseBase(LiveServerTestCase):
     def get_firefox_profile(self):
         return webdriver.FirefoxProfile()
 
-    def get_chrome_driver(self):
-        return Chrome()
+    def get_chrome_driver(self, chrome_options=None):
+        capabilities = chrome_options.to_capabilities()
+        return Chrome(desired_capabilities=capabilities)
 
     @classmethod
     def setup_screenshot_dir(cls):
@@ -247,14 +248,17 @@ class SeleniumTestCaseBase(LiveServerTestCase):
                                  settings.SELENIUM_DEFAULT_BROWSER)
         host = os.getenv('SELENIUM_GRID_HUB',
                                  settings.SELENIUM_GRID_HUB)
+
+        if browser == 'chrome':
+            chrome_options = webdriver.ChromeOptions()
+            if self.mobile_emulation:
+                mobile_emulation = {"deviceName": self.mobile_emulation}
+                chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
+
         if host:
             capabilities = {}
 
             if browser == 'chrome':
-                chrome_options = webdriver.ChromeOptions()
-                if self.mobile_emulation:
-                    mobile_emulation = {"deviceName": self.mobile_emulation}
-                    chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
                 capabilities = chrome_options.to_capabilities()
 
             socket.setdefaulttimeout(30)
@@ -281,7 +285,7 @@ class SeleniumTestCaseBase(LiveServerTestCase):
             # requires a Safari extension to be built from source and installed
             sel = RemoteWebDriver(desired_capabilities=DesiredCapabilities.SAFARI)
         else:
-            sel = self.get_chrome_driver()
+            sel = self.get_chrome_driver(chrome_options)
 
         sel.set_page_load_timeout(settings.SELENIUM_PAGE_LOAD_TIMEOUT)
         time.sleep(1)
@@ -611,5 +615,3 @@ class SeleniumTestCase(SeleniumOperationsMixin, SeleniumTestCaseBase):
     of which browser they're going to be run in.
     """
     pass
-
-
